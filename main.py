@@ -1,10 +1,22 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest
 from datetime import datetime
 import json
 import os
 
 app = FastAPI(title="Recipe API", version="1.0.0")
+
+# Enable CORS for frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # In-memory storage for recipes
 recipes_db: dict[int, dict] = {}
@@ -47,8 +59,8 @@ load_recipes()
 
 @app.get("/")
 def read_root():
-    """Welcome endpoint."""
-    return {"message": "Welcome to the Recipe API"}
+    """Welcome endpoint / Serve frontend."""
+    return FileResponse("index.html", media_type="text/html")
 
 
 @app.get("/recipes")

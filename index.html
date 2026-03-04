@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecipeBox - Modern Recipe Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --white: #ffffff;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: var(--gray-700);
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            animation: fadeInDown 0.6s ease;
+        }
+
+        header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5em;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            color: var(--gray-500);
+            font-weight: 400;
+            letter-spacing: 0.5px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 40px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 2.5em;
+            }
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: fadeInUp 0.6s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 30px 90px rgba(99, 102, 241, 0.12);
+            border-color: rgba(99, 102, 241, 0.1);
+        }
+
+        .card h2 {
+            color: var(--gray-900);
+            margin-bottom: 28px;
+            font-size: 1.5em;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--gray-700);
+            font-weight: 600;
+            font-size: 0.95em;
+            letter-spacing: 0.3px;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1em;
+            transition: all 0.2s ease;
+            background: var(--gray-50);
+        }
+
+        input::placeholder, textarea::placeholder {
+            color: var(--gray-400);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: var(--white);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--white);
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            flex: 1;
+            border: 2px solid var(--gray-200);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-200);
+            border-color: var(--gray-300);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+            border: 2px solid var(--danger);
+            flex: initial;
+            padding: 10px 14px;
+            font-size: 0.8em;
+        }
+
+        .btn-danger:hover {
+            background: var(--danger);
+            color: var(--white);
+        }
+
+        .btn-secondary:disabled, .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .ingredients-container {
+            margin-bottom: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .ingredient-item {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .ingredient-item input {
+            margin-bottom: 0;
+        }
+
+        .ingredient-item button {
+            flex: initial;
+            padding: 10px 12px;
+            width: auto;
+        }
+
+        .search-filters {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+
+        @media (max-width: 768px) {
+            .search-filters {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .recipes-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .recipe-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+            border: 1px solid var(--gray-200);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .recipe-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .recipe-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 50px rgba(99, 102, 241, 0.15);
+        }
+
+        .recipe-card:hover::before {
+            opacity: 1;
+        }
+
+        .recipe-card h3 {
+            color: var(--gray-900);
+            margin-bottom: 10px;
+            font-size: 1.3em;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .recipe-card p {
+            color: var(--gray-600);
+            margin-bottom: 12px;
+            line-height: 1.6;
+            font-size: 0.95em;
+        }
+
+        .recipe-meta {
+            display: flex;
+            gap: 16px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--gray-600);
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+
+        .meta-item strong {
+            color: var(--primary);
+        }
+
+        .ingredients-list {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+            padding: 16px;
+            border-radius: 10px;
+            margin: 16px 0;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        .ingredients-list h4 {
+            color: var(--gray-900);
+            margin-bottom: 10px;
+            font-size: 0.95em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .ingredients-list ul {
+            margin-left: 24px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .ingredients-list li {
+            color: var(--gray-700);
+            font-size: 0.9em;
+        }
+
+        .recipe-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .recipe-actions button {
+            flex: 1;
+            padding: 10px 16px;
+            font-size: 0.85em;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--gray-500);
+        }
+
+        .empty-state p {
+            font-size: 1.15em;
+            margin-bottom: 20px;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .alert {
+            padding: 16px 20px;
+            border-radius: 10px;
+            margin-bottom: 24px;
+            display: none;
+            font-weight: 500;
+            animation: slideDown 0.3s ease;
+            border: 2px solid;
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #047857;
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #991b1b;
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .pagination {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 32px;
+            align-items: center;
+        }
+
+        .pagination button {
+            padding: 10px 16px;
+            min-width: 44px;
+            width: auto;
+        }
+
+        .pagination .page-info {
+            color: var(--gray-600);
+            font-size: 0.9em;
+            font-weight: 500;
+            margin: 0 10px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 36px;
+            width: 90%;
+            max-width: 650px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 90px rgba(0, 0, 0, 0.3);
+            animation: slideUp 0.3s ease;
+        }
+
+        .modal-header {
+            font-size: 1.8em;
+            color: var(--gray-900);
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 16px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-modal {
+            font-size: 2em;
+            cursor: pointer;
+            color: var(--gray-400);
+            background: none;
+            border: none;
+            padding: 0;
+            width: auto;
+            transition: color 0.2s ease;
+        }
+
+        .close-modal:hover {
+            color: var(--gray-700);
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-100);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍳 RecipeBox</h1>
+        </header>
+
+        <div class="alert" id="alert"></div>
+
+        <div class="main-content">
+            <!-- Left: Add/Edit Recipe Form -->
+            <div class="card">
+                <h2 id="formTitle">Create Recipe</h2>
+                <form id="recipeForm">
+                    <div class="form-group">
+                        <label for="title">Recipe Title *</label>
+                        <input type="text" id="title" placeholder="Spaghetti Carbonara" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description</label>
+                        <textarea id="description" placeholder="A classic Italian pasta dish..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ingredients *</label>
+                        <div class="ingredients-container" id="ingredientsContainer">
+                            <div class="ingredient-item">
+                                <input type="text" placeholder="Ingredient name" class="ingredient-name" required>
+                                <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+                                <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-secondary" id="addIngredientBtn" style="margin-top: 10px;">+ Add Ingredient</button>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="instructions">Instructions *</label>
+                        <textarea id="instructions" placeholder="Step-by-step cooking instructions..." required></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="prepTime">Prep Time (min)</label>
+                            <input type="number" id="prepTime" placeholder="10" min="0">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="cookTime">Cook Time (min)</label>
+                            <input type="number" id="cookTime" placeholder="20" min="0">
+                        </div>
+                    </div>
+
+                    <div class="button-group">
+                        <button type="submit" class="btn-primary">Save Recipe</button>
+                        <button type="button" class="btn-secondary" id="resetBtn">Clear</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Right: Recipes Display -->
+            <div class="card">
+                <h2>Your Recipes</h2>
+
+                <div class="search-filters">
+                    <input type="text" id="searchInput" placeholder="Search recipes...">
+                    <input type="text" id="ingredientFilter" placeholder="Filter by ingredient...">
+                </div>
+
+                <div id="recipesContainer" class="recipes-list">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📚</div>
+                        <p>No recipes yet. Create one to get started!</p>
+                    </div>
+                </div>
+
+                <div class="pagination" id="pagination" style="display: none;">
+                    <button class="btn-secondary" id="prevBtn">← Previous</button>
+                    <span class="page-info">
+                        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                    </span>
+                    <button class="btn-secondary" id="nextBtn">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                Edit Recipe
+                <button type="button" class="close-modal" onclick="closeEditModal()">✕</button>
+            </div>
+            <form id="editForm">
+                <div class="form-group">
+                    <label for="editTitle">Recipe Title *</label>
+                    <input type="text" id="editTitle" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editDescription">Description</label>
+                    <textarea id="editDescription"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Ingredients *</label>
+                    <div class="ingredients-container" id="editIngredientsContainer"></div>
+                    <button type="button" class="btn-secondary" id="editAddIngredientBtn" style="margin-top: 10px;">+ Add Ingredient</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="editInstructions">Instructions *</label>
+                    <textarea id="editInstructions" required></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="editPrepTime">Prep Time (min)</label>
+                        <input type="number" id="editPrepTime" min="0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="editCookTime">Cook Time (min)</label>
+                        <input type="number" id="editCookTime" min="0">
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="btn-primary">Update Recipe</button>
+                    <button type="button" class="btn-secondary" onclick="closeEditModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        let currentPage = 1;
+        let currentSearch = '';
+        let currentIngredientFilter = '';
+        let editingRecipeId = null;
+        const LIMIT = 5;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupEventListeners();
+            loadRecipes();
+        });
+
+        function setupEventListeners() {
+            document.getElementById('recipeForm').addEventListener('submit', handleCreateRecipe);
+            document.getElementById('resetBtn').addEventListener('click', resetForm);
+            document.getElementById('addIngredientBtn').addEventListener('click', addIngredientField);
+
+            document.getElementById('searchInput').addEventListener('input', debounce(() => {
+                currentPage = 1;
+                currentSearch = document.getElementById('searchInput').value;
+                loadRecipes();
+            }, 300));
+
+            document.getElementById('ingredientFilter').addEventListener('input', debounce(() => {
+                currentPage = 1;
+                currentIngredientFilter = document.getElementById('ingredientFilter').value;
+                loadRecipes();
+            }, 300));
+
+            document.getElementById('prevBtn').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadRecipes();
+                }
+            });
+
+            document.getElementById('nextBtn').addEventListener('click', () => {
+                currentPage++;
+                loadRecipes();
+            });
+
+            document.getElementById('editForm').addEventListener('submit', handleUpdateRecipe);
+            document.getElementById('editAddIngredientBtn').addEventListener('click', addEditIngredientField);
+
+            setupIngredientRemovalListeners();
+        }
+
+        function setupIngredientRemovalListeners() {
+            document.querySelectorAll('.btn-remove-ingredient').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.closest('.ingredient-item').remove();
+                });
+            });
+        }
+
+        function addIngredientField() {
+            const container = document.getElementById('ingredientsContainer');
+            const div = document.createElement('div');
+            div.className = 'ingredient-item';
+            div.innerHTML = `
+                <input type="text" placeholder="Ingredient name" class="ingredient-name">
+                <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+                <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
+            `;
+            container.appendChild(div);
+            div.querySelector('.btn-remove-ingredient').addEventListener('click', function() {
+                this.closest('.ingredient-item').remove();
+            });
+        }
+
+        function addEditIngredientField() {
+            const container = document.getElementById('editIngredientsContainer');
+            const div = document.createElement('div');
+            div.className = 'ingredient-item';
+            div.innerHTML = `
+                <input type="text" placeholder="Ingredient name" class="ingredient-name">
+                <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+                <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
+            `;
+            container.appendChild(div);
+            div.querySelector('.btn-remove-ingredient').addEventListener('click', function() {
+                this.closest('.ingredient-item').remove();
+            });
+        }
+
+        function getIngredientsFromForm(prefix = '') {
+            const container = prefix ? document.getElementById(`${prefix}IngredientsContainer`) : document.getElementById('ingredientsContainer');
+            const items = container.querySelectorAll('.ingredient-item');
+            return Array.from(items).map(item => {
+                const name = item.querySelector('.ingredient-name').value;
+                const quantity = item.querySelector('.ingredient-quantity').value;
+                if (!name) return null;
+                return quantity ? { name, quantity } : name;
+            }).filter(Boolean);
+        }
+
+        async function handleCreateRecipe(e) {
+            e.preventDefault();
+
+            const recipe = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value || undefined,
+                ingredients: getIngredientsFromForm(),
+                instructions: document.getElementById('instructions').value,
+                prep_time: parseInt(document.getElementById('prepTime').value) || undefined,
+                cook_time: parseInt(document.getElementById('cookTime').value) || undefined
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/recipes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(recipe)
+                });
+
+                if (response.ok) {
+                    showAlert('Recipe created successfully!', 'success');
+                    resetForm();
+                    currentPage = 1;
+                    loadRecipes();
+                } else {
+                    showAlert('Error creating recipe', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function handleUpdateRecipe(e) {
+            e.preventDefault();
+
+            const updates = {
+                title: document.getElementById('editTitle').value,
+                description: document.getElementById('editDescription').value || undefined,
+                ingredients: getIngredientsFromForm('edit'),
+                instructions: document.getElementById('editInstructions').value,
+                prep_time: parseInt(document.getElementById('editPrepTime').value) || undefined,
+                cook_time: parseInt(document.getElementById('editCookTime').value) || undefined
+            };
+
+            try {
+                const response = await fetch(`${API_URL}/recipes/${editingRecipeId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+
+                if (response.ok) {
+                    showAlert('Recipe updated successfully!', 'success');
+                    closeEditModal();
+                    loadRecipes();
+                } else {
+                    showAlert('Error updating recipe', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function loadRecipes() {
+            try {
+                let url = `${API_URL}/recipes?skip=${(currentPage - 1) * LIMIT}&limit=${LIMIT}`;
+                if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
+                if (currentIngredientFilter) url += `&ingredient=${encodeURIComponent(currentIngredientFilter)}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                renderRecipes(data.recipes);
+                updatePagination(data.total);
+            } catch (error) {
+                showAlert('Error loading recipes: ' + error.message, 'error');
+            }
+        }
+
+        function renderRecipes(recipes) {
+            const container = document.getElementById('recipesContainer');
+
+            if (recipes.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><p>No recipes found. Try different search criteria!</p></div>';
+                return;
+            }
+
+            container.innerHTML = recipes.map(recipe => `
+                <div class="recipe-card">
+                    <h3>${recipe.title}</h3>
+                    ${recipe.description ? `<p>${recipe.description}</p>` : ''}
+                    
+                    <div class="recipe-meta">
+                        ${recipe.prep_time ? `<div class="meta-item">⏱️ <strong>${recipe.prep_time}m</strong> prep</div>` : ''}
+                        ${recipe.cook_time ? `<div class="meta-item">🔥 <strong>${recipe.cook_time}m</strong> cook</div>` : ''}
+                    </div>
+
+                    <div class="ingredients-list">
+                        <h4>Ingredients</h4>
+                        <ul>
+                            ${recipe.ingredients.map(ing => {
+                                const name = typeof ing === 'string' ? ing : ing.name;
+                                const qty = typeof ing === 'string' ? '' : (ing.quantity ? ` — ${ing.quantity}` : '');
+                                return `<li>${name}${qty}</li>`;
+                            }).join('')}
+                        </ul>
+                    </div>
+
+                    <p><strong>Instructions:</strong> ${recipe.instructions}</p>
+
+                    <div class="recipe-actions">
+                        <button class="btn-primary" onclick="openEditModal(${recipe.id})">Edit</button>
+                        <button class="btn-danger" onclick="deleteRecipe(${recipe.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePagination(total) {
+            const totalPages = Math.ceil(total / LIMIT);
+            const pagination = document.getElementById('pagination');
+
+            if (total <= LIMIT) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('totalPages').textContent = totalPages;
+            document.getElementById('prevBtn').disabled = currentPage === 1;
+            document.getElementById('nextBtn').disabled = currentPage === totalPages;
+        }
+
+        async function openEditModal(recipeId) {
+            try {
+                const response = await fetch(`${API_URL}/recipes/${recipeId}`);
+                const recipe = await response.json();
+
+                editingRecipeId = recipe.id;
+
+                document.getElementById('editTitle').value = recipe.title;
+                document.getElementById('editDescription').value = recipe.description || '';
+                document.getElementById('editInstructions').value = recipe.instructions;
+                document.getElementById('editPrepTime').value = recipe.prep_time || '';
+                document.getElementById('editCookTime').value = recipe.cook_time || '';
+
+                const container = document.getElementById('editIngredientsContainer');
+                container.innerHTML = '';
+                recipe.ingredients.forEach(ing => {
+                    const div = document.createElement('div');
+                    div.className = 'ingredient-item';
+                    const name = typeof ing === 'string' ? ing : ing.name;
+                    const quantity = typeof ing === 'string' ? '' : (ing.quantity || '');
+                    div.innerHTML = `
+                        <input type="text" placeholder="Ingredient name" class="ingredient-name" value="${name}">
+                        <input type="text" placeholder="Quantity" class="ingredient-quantity" value="${quantity}">
+                        <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
+                    `;
+                    container.appendChild(div);
+                    div.querySelector('.btn-remove-ingredient').addEventListener('click', function() {
+                        this.closest('.ingredient-item').remove();
+                    });
+                });
+
+                document.getElementById('editModal').classList.add('active');
+            } catch (error) {
+                showAlert('Error loading recipe: ' + error.message, 'error');
+            }
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            editingRecipeId = null;
+        }
+
+        async function deleteRecipe(recipeId) {
+            if (!confirm('Are you sure you want to delete this recipe?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/recipes/${recipeId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showAlert('Recipe deleted successfully!', 'success');
+                    loadRecipes();
+                } else {
+                    showAlert('Error deleting recipe', 'error');
+                }
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'error');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('recipeForm').reset();
+            const container = document.getElementById('ingredientsContainer');
+            container.innerHTML = `
+                <div class="ingredient-item">
+                    <input type="text" placeholder="Ingredient name" class="ingredient-name" required>
+                    <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+                    <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
+                </div>
+            `;
+            setupIngredientRemovalListeners();
+        }
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = `alert ${type}`;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 4000);
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(func, wait);
+            };
+        }
+    </script>
+</body>
+</html>
