@@ -33,9 +33,38 @@ The API will be available at `http://localhost:8000`
 
 ## Endpoints
 
-### List all recipes
+### List all recipes (with optional filtering)
 ```
 GET /recipes
+```
+
+**Query Parameters:**
+- `search` (string, optional): Search in title and description (case-insensitive)
+- `ingredient` (string, optional): Filter recipes containing a specific ingredient
+- `category` (string, optional): Filter by recipe category
+- `skip` (integer, optional): Pagination offset (default: 0)
+- `limit` (integer, optional): Pagination limit (default: 100, max: 100)
+- `sort_by` (string, optional): Sort field - `created_at`, `title`, `prep_time`, `cook_time` (default: created_at)
+
+**Examples:**
+```
+GET /recipes?search=pasta
+GET /recipes?ingredient=tomato
+GET /recipes?search=pasta&skip=0&limit=10
+GET /recipes?sort_by=prep_time&limit=5
+GET /recipes?ingredient=egg&search=breakfast
+```
+
+### Advanced search
+```
+POST /search
+Content-Type: application/json
+
+{
+  "query": "pasta",
+  "search_fields": ["title", "description"],
+  "max_results": 10
+}
 ```
 
 ### Get a specific recipe

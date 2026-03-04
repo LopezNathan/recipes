@@ -37,3 +37,10 @@ class Recipe(RecipeBase):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class SearchRequest(BaseModel):
+    """Request model for advanced search."""
+    query: str
+    search_fields: Optional[list[str]] = None
+    max_results: int = 10

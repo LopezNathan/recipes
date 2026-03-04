@@ -63,9 +63,155 @@ class TestListRecipes:
         # List recipes
         response = client.get("/recipes")
         assert response.status_code == 200
+        data = response.json()
+        assert len(data["recipes"]) == 1
+        assert data["recipes"][0]["title"] == "Pasta"
+    
+    def test_list_recipes_pagination(self):
+        """Test pagination with skip and limit."""
+        # Create 5 recipes
+        for i in range(5):
+            recipe_data = {
+                "title": f"Recipe {i+1}",
+                "ingredients": ["ingredient"],
+                "instructions": "Cook"
+            }
+            client.post("/recipes", json=recipe_data)
+        
+        # Get first 2
+        response = client.get("/recipes?skip=0&limit=2")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["recipes"]) == 2
+        assert data["total"] == 5
+        assert data["skip"] == 0
+        assert data["limit"] == 2
+        
+        # Get next 2
+        response = client.get("/recipes?skip=2&limit=2")
+        assert len(response.json()["recipes"]) == 2
+    
+    def test_list_recipes_search_by_title(self):
+        """Test searching recipes by title."""
+        # Create recipes
+        client.post("/recipes", json={
+            "title": "Spaghetti with Pasta",
+            "ingredients": ["pasta"],
+            "instructions": "Cook"
+        })
+        client.post("/recipes", json={
+            "title": "Pasta Primavera",
+            "ingredients": ["pasta"],
+            "instructions": "Cook"
+        })
+        client.post("/recipes", json={
+            "title": "Grilled Chicken",
+            "ingredients": ["chicken"],
+            "instructions": "Grill"
+        })
+        
+        # Search for pasta
+        response = client.get("/recipes?search=pasta")
+        assert response.status_code == 200
         recipes = response.json()["recipes"]
-        assert len(recipes) == 1
-        assert recipes[0]["title"] == "Pasta"
+        assert len(recipes) == 2
+        assert all("pasta" in r["title"].lower() for r in recipes)
+    
+    def test_list_recipes_search_case_insensitive(self):
+        """Test that search is case-insensitive."""
+        client.post("/recipes", json={
+            "title": "Spaghetti Carbonara",
+            "ingredients": ["pasta"],
+            "instructions": "Cook"
+        })
+        
+        # Search with different cases - all should match "spaghetti"
+        response1 = client.get("/recipes?search=spaghetti")
+        response2 = client.get("/recipes?search=SPAGHETTI")
+        response3 = client.get("/recipes?search=Spa")  # partial substring match
+        
+        assert len(response1.json()["recipes"]) == 1
+        assert len(response2.json()["recipes"]) == 1
+        assert len(response3.json()["recipes"]) == 1
+    
+    def test_list_recipes_search_by_description(self):
+        """Test searching recipes by description."""
+        client.post("/recipes", json={
+            "title": "Special Pasta",
+            "description": "An Italian masterpiece",
+            "ingredients": ["pasta"],
+            "instructions": "Cook"
+        })
+        
+        # Search for description keyword
+        response = client.get("/recipes?search=Italian")
+        assert response.status_code == 200
+        assert len(response.json()["recipes"]) == 1
+    
+    def test_list_recipes_filter_by_ingredient(self):
+        """Test filtering recipes by ingredient."""
+        # Create recipes
+        client.post("/recipes", json={
+            "title": "Pasta Carbonara",
+            "ingredients": [
+                {"name": "pasta", "quantity": "400g"},
+                {"name": "eggs", "quantity": "3"}
+            ],
+            "instructions": "Cook"
+        })
+        client.post("/recipes", json={
+            "title": "Omelet",
+            "ingredients": [
+                {"name": "eggs", "quantity": "2"},
+                {"name": "butter", "quantity": "50g"}
+            ],
+            "instructions": "Fry"
+        })
+        client.post("/recipes", json={
+            "title": "Grilled Chicken",
+            "ingredients": ["chicken"],
+            "instructions": "Grill"
+        })
+        
+        # Filter by egg
+        response = client.get("/recipes?ingredient=egg")
+        assert response.status_code == 200
+        recipes = response.json()["recipes"]
+        assert len(recipes) == 2
+    
+    def test_list_recipes_filter_by_ingredient_case_insensitive(self):
+        """Test that ingredient filter is case-insensitive."""
+        client.post("/recipes", json={
+            "title": "Pasta",
+            "ingredients": ["Tomato", "Pasta"],
+            "instructions": "Cook"
+        })
+        
+        # Search with different cases
+        response1 = client.get("/recipes?ingredient=tomato")
+        response2 = client.get("/recipes?ingredient=TOMATO")
+        response3 = client.get("/recipes?ingredient=ToMaTo")
+        
+        assert len(response1.json()["recipes"]) == 1
+        assert len(response2.json()["recipes"]) == 1
+        assert len(response3.json()["recipes"]) == 1
+    
+    def test_list_recipes_sort_by_title(self):
+        """Test sorting recipes by title."""
+        # Create recipes in random order
+        titles = ["Zebra Pasta", "Apple Salad", "Banana Bread"]
+        for title in titles:
+            client.post("/recipes", json={
+                "title": title,
+                "ingredients": ["ingredient"],
+                "instructions": "Cook"
+            })
+        
+        # Sort by title
+        response = client.get("/recipes?sort_by=title")
+        recipes = response.json()["recipes"]
+        recipe_titles = [r["title"] for r in recipes]
+        assert recipe_titles == sorted(recipe_titles)
 
 
 class TestCreateRecipe:
@@ -403,6 +549,85 @@ class TestDeleteRecipe:
         assert id1 == 1
         assert id2 == 2
         assert id3 == 3
+
+
+
+
+class TestSearchEndpoint:
+    """Test search endpoint."""
+    
+    def test_search_recipes_by_title(self):
+        """Test searching recipes by title."""
+        # Create recipes
+        client.post("/recipes", json={
+            "title": "Spaghetti with Pasta",
+            "ingredients": ["pasta"],
+            "instructions": "Cook"
+        })
+        client.post("/recipes", json={
+            "title": "Pasta Primavera",
+            "ingredients": ["pasta"],
+            "instructions": "Cook"
+        })
+        client.post("/recipes", json={
+            "title": "Grilled Chicken",
+            "ingredients": ["chicken"],
+            "instructions": "Grill"
+        })
+        
+        # Search for pasta
+        response = client.post("/search", json={"query": "pasta"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["query"] == "pasta"
+        assert data["count"] == 2
+        assert len(data["results"]) == 2
+    
+    def test_search_recipes_empty_query(self):
+        """Test that empty query raises error."""
+        response = client.post("/search", json={"query": ""})
+        assert response.status_code == 400
+    
+    def test_search_recipes_max_results(self):
+        """Test max_results parameter."""
+        # Create 5 recipes with "test" in title
+        for i in range(5):
+            client.post("/recipes", json={
+                "title": f"Test Recipe {i+1}",
+                "ingredients": ["ingredient"],
+                "instructions": "Cook"
+            })
+        
+        # Search with max_results=2
+        response = client.post("/search", json={
+            "query": "test",
+            "max_results": 2
+        })
+        assert response.status_code == 200
+        assert response.json()["count"] == 2
+    
+    def test_search_recipes_search_fields(self):
+        """Test searching in specific fields."""
+        client.post("/recipes", json={
+            "title": "Simple Pasta",
+            "description": "An Italian dish",
+            "ingredients": ["pasta"],
+            "instructions": "Cook"
+        })
+        
+        # Search only in title
+        response = client.post("/search", json={
+            "query": "Italian",
+            "search_fields": ["title"]
+        })
+        assert response.json()["count"] == 0
+        
+        # Search only in description
+        response = client.post("/search", json={
+            "query": "Italian",
+            "search_fields": ["description"]
+        })
+        assert response.json()["count"] == 1
 
 
 class TestIntegration:
