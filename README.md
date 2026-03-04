@@ -51,12 +51,21 @@ Content-Type: application/json
 {
   "title": "Spaghetti Carbonara",
   "description": "A classic Italian pasta dish",
-  "ingredients": ["pasta", "eggs", "bacon", "parmesan"],
+  "ingredients": [
+    {"name": "pasta", "quantity": "400g"},
+    {"name": "eggs", "quantity": "3"},
+    {"name": "bacon", "quantity": "200g"},
+    {"name": "parmesan", "quantity": "100g"}
+  ],
   "instructions": "Cook pasta, fry bacon, mix with eggs and cheese",
   "prep_time": 10,
   "cook_time": 20
 }
 ```
+
+**Note:** You can specify ingredients in two formats:
+- **With quantity:** `{"name": "pasta", "quantity": "400g"}`
+- **Simple string:** `"pasta"` (quantity is optional)
 
 ### Update a recipe
 ```

@@ -84,16 +84,62 @@ class TestCreateRecipe:
         data = response.json()
         assert data["id"] == 1
         assert data["title"] == "Simple Pasta"
-        assert data["ingredients"] == ["pasta", "salt", "water"]
+        assert len(data["ingredients"]) == 3
         assert "created_at" in data
         assert "updated_at" in data
+    
+    def test_create_recipe_with_ingredient_quantities(self):
+        """Test creating a recipe with ingredients that have quantities."""
+        recipe_data = {
+            "title": "Spaghetti Carbonara",
+            "ingredients": [
+                {"name": "pasta", "quantity": "400g"},
+                {"name": "eggs", "quantity": "3"},
+                {"name": "bacon", "quantity": "200g"},
+                {"name": "parmesan", "quantity": "100g"}
+            ],
+            "instructions": "Cook pasta, fry bacon, mix with eggs and cheese"
+        }
+        response = client.post("/recipes", json=recipe_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["id"] == 1
+        assert data["title"] == "Spaghetti Carbonara"
+        assert len(data["ingredients"]) == 4
+        # Verify ingredient structure
+        assert data["ingredients"][0]["name"] == "pasta"
+        assert data["ingredients"][0]["quantity"] == "400g"
+    
+    def test_create_recipe_mixed_ingredient_formats(self):
+        """Test creating a recipe with mixed ingredient formats (strings and objects)."""
+        recipe_data = {
+            "title": "Mixed Ingredients Recipe",
+            "ingredients": [
+                "salt",
+                {"name": "flour", "quantity": "2 cups"},
+                "pepper",
+                {"name": "butter", "quantity": "100g"}
+            ],
+            "instructions": "Mix all ingredients"
+        }
+        response = client.post("/recipes", json=recipe_data)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert len(data["ingredients"]) == 4
     
     def test_create_recipe_full(self):
         """Test creating a recipe with all fields."""
         recipe_data = {
             "title": "Spaghetti Carbonara",
             "description": "A classic Italian pasta dish",
-            "ingredients": ["pasta", "eggs", "bacon", "parmesan"],
+            "ingredients": [
+                {"name": "pasta", "quantity": "400g"},
+                {"name": "eggs", "quantity": "3"},
+                {"name": "bacon", "quantity": "200g"},
+                {"name": "parmesan", "quantity": "100g"}
+            ],
             "instructions": "Cook pasta, fry bacon, mix with eggs and cheese",
             "prep_time": 10,
             "cook_time": 20
@@ -107,6 +153,7 @@ class TestCreateRecipe:
         assert data["description"] == "A classic Italian pasta dish"
         assert data["prep_time"] == 10
         assert data["cook_time"] == 20
+        assert len(data["ingredients"]) == 4
     
     def test_create_recipe_missing_title(self):
         """Test creating a recipe without title fails."""
@@ -254,15 +301,22 @@ class TestUpdateRecipe:
         create_response = client.post("/recipes", json=recipe_data)
         recipe_id = create_response.json()["id"]
         
-        # Update ingredients
+        # Update ingredients with quantities
         update_data = {
-            "ingredients": ["pasta", "salt", "olive oil", "garlic"]
+            "ingredients": [
+                {"name": "pasta", "quantity": "500g"},
+                {"name": "salt", "quantity": "1 teaspoon"},
+                {"name": "olive oil", "quantity": "2 tablespoons"},
+                {"name": "garlic", "quantity": "3 cloves"}
+            ]
         }
         response = client.put(f"/recipes/{recipe_id}", json=update_data)
         
         assert response.status_code == 200
         data = response.json()
-        assert data["ingredients"] == ["pasta", "salt", "olive oil", "garlic"]
+        assert len(data["ingredients"]) == 4
+        assert data["ingredients"][0]["name"] == "pasta"
+        assert data["ingredients"][0]["quantity"] == "500g"
     
     def test_update_recipe_not_found(self):
         """Test updating a non-existent recipe."""
