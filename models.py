@@ -16,6 +16,7 @@ class RecipeBase(BaseModel):
     instructions: str
     prep_time: Optional[int] = None  # in minutes
     cook_time: Optional[int] = None  # in minutes
+    category: Optional[str] = None  # e.g., "dessert", "main", "appetizer"
 
 
 class RecipeCreate(RecipeBase):
@@ -29,6 +30,7 @@ class RecipeUpdate(BaseModel):
     instructions: Optional[str] = None
     prep_time: Optional[int] = None
     cook_time: Optional[int] = None
+    category: Optional[str] = None
 
 
 class Recipe(RecipeBase):

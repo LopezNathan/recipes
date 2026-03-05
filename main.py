@@ -1,13 +1,35 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
+"""FastAPI Recipe Application with SQLite."""
+
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest
-from datetime import datetime
-import json
-import os
+from contextlib import asynccontextmanager
+from sqlalchemy.ext.asyncio import AsyncSession
 
-app = FastAPI(title="Recipe API", version="1.0.0")
+from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest
+from database import init_db, AsyncSessionLocal
+from db import SQLiteRecipeDatabase
+
+
+# Lifespan event handler for startup/shutdown
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database on startup, cleanup on shutdown."""
+    # Startup
+    await init_db()
+    print("✅ Database initialized")
+    yield
+    # Shutdown
+    print("👋 Shutting down")
+
+
+# Create FastAPI app
+app = FastAPI(
+    title="Recipe API",
+    version="1.0.0",
+    description="A simple recipe management API",
+    lifespan=lifespan
+)
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -18,233 +40,111 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory storage for recipes
-recipes_db: dict[int, dict] = {}
-next_id = 1
 
-# File for persistent storage
-DB_FILE = "recipes.json"
-
-
-def load_recipes():
-    """Load recipes from JSON file if it exists."""
-    global recipes_db, next_id
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, "r") as f:
-                data = json.load(f)
-                recipes_db = data.get("recipes", {})
-                next_id = data.get("next_id", 1)
-        except Exception as e:
-            print(f"Error loading recipes: {e}")
+# Dependency to get database instance
+async def get_recipe_db(session: AsyncSession = Depends(lambda: AsyncSessionLocal())) -> SQLiteRecipeDatabase:
+    """Get SQLite recipe database."""
+    return SQLiteRecipeDatabase(session)
 
 
-def save_recipes():
-    """Save recipes to JSON file."""
-    try:
-        with open(DB_FILE, "w") as f:
-            json.dump(
-                {"recipes": recipes_db, "next_id": next_id},
-                f,
-                indent=2,
-                default=str,
-            )
-    except Exception as e:
-        print(f"Error saving recipes: {e}")
 
-
-# Load recipes on startup
-load_recipes()
-
-
+# Routes
 @app.get("/")
-def read_root():
-    """Welcome endpoint / Serve frontend."""
+async def root():
+    """Serve the main HTML page."""
     return FileResponse("index.html", media_type="text/html")
 
 
-@app.get("/recipes")
-def list_recipes(
+@app.get("/recipes", response_model=dict)
+async def list_recipes(
     skip: int = 0,
     limit: int = 100,
     search: str | None = None,
     ingredient: str | None = None,
     category: str | None = None,
-    sort_by: str = "created_at"
+    sort_by: str = "created_at",
+    db: SQLiteRecipeDatabase = Depends(get_recipe_db),
 ):
     """
-    Get all recipes with optional filtering and search.
+    List all recipes with optional filtering and pagination.
     
     Query parameters:
-    - search: Search in title and description (case-insensitive)
-    - ingredient: Filter recipes containing a specific ingredient
-    - category: Filter by recipe category
-    - skip: Pagination offset (default: 0)
-    - limit: Pagination limit (default: 100, max: 100)
-    - sort_by: Sort field (created_at, title, prep_time, cook_time)
+    - skip: Number of recipes to skip (for pagination)
+    - limit: Maximum number of recipes to return
+    - search: Search in title and description
+    - ingredient: Filter by ingredient
+    - category: Filter by category
+    - sort_by: Sort field (created_at or title)
     """
-    # Limit the max limit to 100
-    limit = min(limit, 100)
-    
-    recipes = []
-    for recipe_id, recipe_data in recipes_db.items():
-        recipe_data["id"] = int(recipe_id)
-        recipes.append(recipe_data)
-    
-    # Apply search filter
-    if search:
-        search_lower = search.lower()
-        recipes = [
-            r for r in recipes
-            if search_lower in r.get("title", "").lower()
-            or search_lower in (r.get("description") or "").lower()
-        ]
-    
-    # Apply ingredient filter
-    if ingredient:
-        ingredient_lower = ingredient.lower()
-        filtered_recipes = []
-        for r in recipes:
-            ingredients = r.get("ingredients", [])
-            for ing in ingredients:
-                # Handle both string and object formats
-                ing_name = ing.get("name", ing).lower() if isinstance(ing, dict) else str(ing).lower()
-                if ingredient_lower in ing_name:
-                    filtered_recipes.append(r)
-                    break
-        recipes = filtered_recipes
-    
-    # Apply category filter if category field exists
-    if category:
-        recipes = [r for r in recipes if r.get("category", "").lower() == category.lower()]
-    
-    # Sort recipes
-    sort_field = sort_by if sort_by in ["created_at", "title", "prep_time", "cook_time"] else "created_at"
-    reverse = sort_field == "created_at"
-    
-    try:
-        recipes.sort(
-            key=lambda x: x.get(sort_field, ""),
-            reverse=reverse
-        )
-    except TypeError:
-        # If sorting fails, return unsorted
-        pass
-    
-    # Apply pagination
-    total = len(recipes)
-    recipes = recipes[skip : skip + limit]
+    recipes, total = await db.list_all(
+        skip=skip,
+        limit=limit,
+        search=search,
+        ingredient=ingredient,
+        category=category,
+        sort_by=sort_by,
+    )
     
     return {
         "recipes": recipes,
         "total": total,
         "skip": skip,
-        "limit": limit
+        "limit": limit,
     }
 
 
-@app.get("/recipes/{recipe_id}")
-def get_recipe(recipe_id: int):
+@app.get("/recipes/{recipe_id}", response_model=Recipe)
+async def get_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
     """Get a specific recipe by ID."""
-    if str(recipe_id) not in recipes_db:
+    recipe = await db.get(recipe_id)
+    if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    recipe = recipes_db[str(recipe_id)].copy()
-    recipe["id"] = recipe_id
     return recipe
 
 
-@app.post("/search")
-def search_recipes(search_request: SearchRequest):
-    """
-    Advanced search endpoint.
-    
-    Parameters:
-    - query: Search query string
-    - search_fields: Fields to search in (default: ["title", "description"])
-    - max_results: Maximum results to return (default: 10)
-    """
-    if not search_request.query or len(search_request.query.strip()) == 0:
-        raise HTTPException(status_code=400, detail="Query cannot be empty")
-    
-    search_fields = search_request.search_fields
-    if search_fields is None:
-        search_fields = ["title", "description"]
-    
-    query_lower = search_request.query.lower()
-    results = []
-    
-    for recipe_id, recipe_data in recipes_db.items():
-        recipe = recipe_data.copy()
-        recipe["id"] = int(recipe_id)
-        
-        # Search in specified fields
-        match_found = False
-        for field in search_fields:
-            if field in recipe and isinstance(recipe[field], str):
-                if query_lower in recipe[field].lower():
-                    match_found = True
-                    break
-        
-        if match_found:
-            results.append(recipe)
-        
-        if len(results) >= search_request.max_results:
-            break
-    
-    return {
-        "query": search_request.query,
-        "results": results,
-        "count": len(results)
-    }
-
-
-@app.post("/recipes", status_code=201)
-def create_recipe(recipe: RecipeCreate):
+@app.post("/recipes", response_model=Recipe, status_code=201)
+async def create_recipe(recipe: RecipeCreate, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
     """Create a new recipe."""
-    global next_id
-    
-    recipe_data = recipe.model_dump()
-    recipe_data["created_at"] = datetime.now().isoformat()
-    recipe_data["updated_at"] = datetime.now().isoformat()
-    
-    recipes_db[str(next_id)] = recipe_data
-    save_recipes()
-    
-    response = recipe_data.copy()
-    response["id"] = next_id
-    next_id += 1
-    
-    return response
+    return await db.create(recipe)
 
 
-@app.put("/recipes/{recipe_id}")
-def update_recipe(recipe_id: int, recipe: RecipeUpdate):
-    """Update an existing recipe."""
-    if str(recipe_id) not in recipes_db:
+@app.put("/recipes/{recipe_id}", response_model=Recipe)
+async def update_recipe(
+    recipe_id: int,
+    recipe_update: RecipeUpdate,
+    db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+):
+    """Update a recipe."""
+    recipe = await db.update(recipe_id, recipe_update)
+    if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    
-    existing_recipe = recipes_db[str(recipe_id)]
-    update_data = recipe.model_dump(exclude_unset=True)
-    
-    updated_recipe = {**existing_recipe, **update_data}
-    updated_recipe["updated_at"] = datetime.now().isoformat()
-    
-    recipes_db[str(recipe_id)] = updated_recipe
-    save_recipes()
-    
-    response = updated_recipe.copy()
-    response["id"] = recipe_id
-    
-    return response
+    return recipe
 
 
 @app.delete("/recipes/{recipe_id}", status_code=204)
-def delete_recipe(recipe_id: int):
+async def delete_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
     """Delete a recipe."""
-    if str(recipe_id) not in recipes_db:
+    success = await db.delete(recipe_id)
+    if not success:
         raise HTTPException(status_code=404, detail="Recipe not found")
-    
-    del recipes_db[str(recipe_id)]
-    save_recipes()
-    
     return None
+
+
+@app.post("/search", response_model=list[Recipe])
+async def search_recipes(
+    search_request: SearchRequest,
+    db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+):
+    """
+    Advanced search across recipes.
+    
+    Body parameters:
+    - query: Search query string
+    - search_fields: Fields to search in (default: title, description)
+    - max_results: Maximum number of results to return
+    """
+    return await db.search(
+        query=search_request.query,
+        search_fields=search_request.search_fields,
+        max_results=search_request.max_results,
+    )
