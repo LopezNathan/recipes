@@ -6,9 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest
+from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest, RecipeImportRequest
 from database import init_db, AsyncSessionLocal
 from db import SQLiteRecipeDatabase
+from scraper import scrape_recipe
 
 
 # Lifespan event handler for startup/shutdown
@@ -148,3 +149,43 @@ async def search_recipes(
         search_fields=search_request.search_fields,
         max_results=search_request.max_results,
     )
+
+
+@app.post("/import", response_model=Recipe, status_code=201)
+async def import_recipe(
+    import_request: RecipeImportRequest,
+    db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+):
+    """
+    Import a recipe from a URL.
+    
+    Supports 900+ recipe websites including:
+    - AllRecipes
+    - Food Network
+    - BBC Good Food
+    - Serious Eats
+    - Bon Appétit
+    - And many more!
+    
+    Body parameters:
+    - url: The URL of the recipe to import
+    
+    Example:
+    ```
+    POST /import
+    {
+      "url": "https://www.allrecipes.com/recipe/..."
+    }
+    ```
+    """
+    # Scrape recipe from URL
+    recipe_data = await scrape_recipe(import_request.url)
+    
+    if not recipe_data:
+        raise HTTPException(
+            status_code=400, 
+            detail="Failed to scrape recipe from URL. Please ensure the URL is a valid recipe page."
+        )
+    
+    # Create recipe in database
+    return await db.create(recipe_data)

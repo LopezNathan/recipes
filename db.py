@@ -88,6 +88,7 @@ class SQLiteRecipeDatabase(RecipeDatabase):
             prep_time=recipe.prep_time,
             cook_time=recipe.cook_time,
             category=recipe.category,
+            image_url=recipe.image_url,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -288,6 +289,7 @@ class SQLiteRecipeDatabase(RecipeDatabase):
             prep_time=db_recipe.prep_time,
             cook_time=db_recipe.cook_time,
             category=db_recipe.category,
+            image_url=db_recipe.image_url,
             created_at=db_recipe.created_at,
             updated_at=db_recipe.updated_at,
         )

@@ -7,3 +7,5 @@ httpx
 sqlalchemy
 aiosqlite
 greenlet
+recipe-scrapers
+python-dotenv

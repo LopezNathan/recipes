@@ -17,6 +17,7 @@ class RecipeBase(BaseModel):
     prep_time: Optional[int] = None  # in minutes
     cook_time: Optional[int] = None  # in minutes
     category: Optional[str] = None  # e.g., "dessert", "main", "appetizer"
+    image_url: Optional[str] = None  # URL to recipe image
 
 
 class RecipeCreate(RecipeBase):
@@ -31,6 +32,7 @@ class RecipeUpdate(BaseModel):
     prep_time: Optional[int] = None
     cook_time: Optional[int] = None
     category: Optional[str] = None
+    image_url: Optional[str] = None
 
 
 class Recipe(RecipeBase):
@@ -46,3 +48,8 @@ class SearchRequest(BaseModel):
     query: str
     search_fields: Optional[list[str]] = None
     max_results: int = 10
+
+
+class RecipeImportRequest(BaseModel):
+    """Request model for importing recipe from URL."""
+    url: str

@@ -377,6 +377,35 @@
             font-size: 0.9em;
         }
 
+        .instructions-list {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+            padding: 16px;
+            border-radius: 10px;
+            margin: 16px 0;
+            border: 1px solid rgba(59, 130, 246, 0.1);
+        }
+
+        .instructions-list h4 {
+            color: var(--gray-900);
+            margin-bottom: 10px;
+            font-size: 0.95em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .instructions-list ol {
+            margin-left: 24px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .instructions-list li {
+            color: var(--gray-700);
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
         .recipe-actions {
             display: flex;
             gap: 10px;
@@ -592,6 +621,18 @@
             <!-- Left: Add/Edit Recipe Form -->
             <div class="card">
                 <h2 id="formTitle">Create Recipe</h2>
+                
+                <!-- Import from URL Section -->
+                <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--gray-200);">
+                    <h3 style="font-size: 1em; margin-bottom: 12px; color: var(--gray-700);">📱 Import from URL</h3>
+                    <p style="font-size: 0.9em; color: var(--gray-500); margin-bottom: 12px;">Paste a recipe URL from AllRecipes, Food Network, Serious Eats, and 900+ other sites</p>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="url" id="importUrl" placeholder="https://www.budgetbytes.com/recipe..." style="flex: 1; padding: 10px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 0.9em;">
+                        <button type="button" id="importBtn" class="btn-primary" style="padding: 10px 20px;">Import</button>
+                    </div>
+                    <div id="importStatus" style="margin-top: 10px; font-size: 0.9em;"></div>
+                </div>
+
                 <form id="recipeForm">
                     <div class="form-group">
                         <label for="title">Recipe Title *</label>
@@ -629,6 +670,11 @@
                             <label for="cookTime">Cook Time (min)</label>
                             <input type="number" id="cookTime" placeholder="20" min="0">
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="imageUrl">Image URL</label>
+                        <input type="url" id="imageUrl" placeholder="https://example.com/recipe-image.jpg">
                     </div>
 
                     <div class="button-group">
@@ -684,6 +730,11 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="editImageUrl">Image URL</label>
+                    <input type="url" id="editImageUrl" placeholder="https://...">
+                </div>
+
+                <div class="form-group">
                     <label>Ingredients *</label>
                     <div class="ingredients-container" id="editIngredientsContainer"></div>
                     <button type="button" class="btn-secondary" id="editAddIngredientBtn" style="margin-top: 10px;">+ Add Ingredient</button>
@@ -730,6 +781,7 @@
             document.getElementById('recipeForm').addEventListener('submit', handleCreateRecipe);
             document.getElementById('resetBtn').addEventListener('click', resetForm);
             document.getElementById('addIngredientBtn').addEventListener('click', addIngredientField);
+            document.getElementById('importBtn').addEventListener('click', handleImportRecipe);
 
             document.getElementById('searchInput').addEventListener('input', debounce(() => {
                 currentPage = 1;
@@ -819,7 +871,8 @@
                 ingredients: getIngredientsFromForm(),
                 instructions: document.getElementById('instructions').value,
                 prep_time: parseInt(document.getElementById('prepTime').value) || undefined,
-                cook_time: parseInt(document.getElementById('cookTime').value) || undefined
+                cook_time: parseInt(document.getElementById('cookTime').value) || undefined,
+                image_url: document.getElementById('imageUrl').value || undefined
             };
 
             try {
@@ -842,12 +895,50 @@
             }
         }
 
+        async function handleImportRecipe() {
+            const url = document.getElementById('importUrl').value.trim();
+            const statusDiv = document.getElementById('importStatus');
+
+            if (!url) {
+                statusDiv.innerHTML = '⚠️ Please enter a recipe URL';
+                statusDiv.style.color = 'var(--warning)';
+                return;
+            }
+
+            statusDiv.innerHTML = '⏳ Importing recipe...';
+            statusDiv.style.color = 'var(--primary)';
+
+            try {
+                const response = await fetch(`${API_URL}/import`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+
+                if (response.ok) {
+                    const recipe = await response.json();
+                    statusDiv.innerHTML = `✅ Imported: "${recipe.title}"`;
+                    statusDiv.style.color = 'var(--success)';
+                    document.getElementById('importUrl').value = '';
+                    loadRecipes();
+                } else {
+                    const error = await response.json();
+                    statusDiv.innerHTML = `❌ ${error.detail || 'Failed to import recipe'}`;
+                    statusDiv.style.color = 'var(--danger)';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Error: ${error.message}`;
+                statusDiv.style.color = 'var(--danger)';
+            }
+        }
+
         async function handleUpdateRecipe(e) {
             e.preventDefault();
 
             const updates = {
                 title: document.getElementById('editTitle').value,
                 description: document.getElementById('editDescription').value || undefined,
+                image_url: document.getElementById('editImageUrl').value || undefined,
                 ingredients: getIngredientsFromForm('edit'),
                 instructions: document.getElementById('editInstructions').value,
                 prep_time: parseInt(document.getElementById('editPrepTime').value) || undefined,
@@ -899,6 +990,7 @@
 
             container.innerHTML = recipes.map(recipe => `
                 <div class="recipe-card">
+                    ${recipe.image_url ? `<div style="width: 100%; height: 150px; margin: -12px -12px 12px -12px; overflow: hidden; border-radius: 6px 6px 0 0;"><img src="${recipe.image_url}" alt="${recipe.title}" style="width: 100%; height: 100%; object-fit: cover;"></div>` : ''}
                     <h3>${recipe.title}</h3>
                     ${recipe.description ? `<p>${recipe.description}</p>` : ''}
                     
@@ -918,7 +1010,12 @@
                         </ul>
                     </div>
 
-                    <p><strong>Instructions:</strong> ${recipe.instructions}</p>
+                    <div class="instructions-list">
+                        <h4>Instructions</h4>
+                        <ol>
+                            ${recipe.instructions.split('\n').filter(line => line.trim()).map(instruction => `<li>${instruction.trim()}</li>`).join('')}
+                        </ol>
+                    </div>
 
                     <div class="recipe-actions">
                         <button class="btn-primary" onclick="openEditModal(${recipe.id})">Edit</button>
@@ -953,6 +1050,7 @@
 
                 document.getElementById('editTitle').value = recipe.title;
                 document.getElementById('editDescription').value = recipe.description || '';
+                document.getElementById('editImageUrl').value = recipe.image_url || '';
                 document.getElementById('editInstructions').value = recipe.instructions;
                 document.getElementById('editPrepTime').value = recipe.prep_time || '';
                 document.getElementById('editCookTime').value = recipe.cook_time || '';

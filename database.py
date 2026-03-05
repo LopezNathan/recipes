@@ -42,6 +42,7 @@ class RecipeModel(Base):
     prep_time = Column(Integer, nullable=True)  # in minutes
     cook_time = Column(Integer, nullable=True)  # in minutes
     category = Column(String(100), index=True, nullable=True)
+    image_url = Column(String(500), nullable=True)  # URL to recipe image
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
