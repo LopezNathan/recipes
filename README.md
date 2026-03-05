@@ -1,30 +1,40 @@
 # Recipe API
 
-A simple FastAPI application for creating, reading, updating, and deleting recipes.
+A simple FastAPI application for creating, reading, updating, and deleting recipes with SQLite persistence.
 
 ## Features
 
-- Create recipes with title, description, ingredients, instructions, and cooking times
+- Create recipes with title, description, ingredients, instructions, cooking times, and categories
 - Read all recipes or get a specific recipe by ID
 - Update recipe details
 - Delete recipes
-- Persistent JSON-based storage
+- Search and filter recipes by title, description, ingredients, and category
+- **Persistent SQLite database** - suitable for cloud deployment
+- Async/await throughout for non-blocking I/O
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Create Virtual Environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 2. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Run the Server
+### 3. Run the Server
 
 ```bash
 uvicorn main:app --reload
 ```
 
 The API will be available at `http://localhost:8000`
+The database (`recipes.db`) will be created automatically on first run.
 
 ### 3. API Documentation
 
@@ -115,6 +125,49 @@ DELETE /recipes/{recipe_id}
 ## Project Structure
 
 - `main.py` - FastAPI application and route handlers
-- `models.py` - Pydantic data models
+- `models.py` - Pydantic data models for request/response validation
+- `database.py` - SQLAlchemy async engine and database models
+- `db.py` - Abstract database interface and SQLite implementation
 - `requirements.txt` - Python dependencies
-- `recipes.json` - Persistent data storage (created automatically)
+- `recipes.db` - SQLite database (auto-created on first run)
+- `index.html` - Frontend UI
+
+## Database
+
+This app uses **SQLite** with **SQLAlchemy ORM** for data persistence:
+- Database file: `recipes.db` (auto-created on first run, NOT committed to git)
+- Schema: Recipes table with id, title, description, ingredients (JSON), instructions, prep_time, cook_time, category, created_at, updated_at
+- **Easy migration path**: The abstraction layer in `db.py` allows swapping to PostgreSQL, DynamoDB, or other databases in the future
+
+## Testing
+
+Run the test suite with:
+
+```bash
+pytest tests/ -v
+```
+
+**Test Structure:**
+- `tests/conftest.py` - Shared pytest fixtures for database setup/teardown
+- `tests/test_recipes_crud.py` - 10 tests for Create, Read, Update, Delete operations
+- `tests/test_recipes_list.py` - 5 tests for listing and pagination
+- `tests/test_recipes_search.py` - 9 tests for search and filtering
+
+**Test features:**
+- Uses fresh file-based SQLite database for each test (auto-cleanup)
+- **24 total tests** covering all CRUD operations, search, filtering, and error cases
+- Async tests with proper fixture setup/teardown
+- Each test is independent with isolated database state
+- Fast execution (~0.35 seconds for full suite)
+
+**Example output:**
+```
+tests/test_recipes_crud.py::test_create_recipe PASSED
+tests/test_recipes_crud.py::test_update_recipe PASSED
+tests/test_recipes_crud.py::test_delete_recipe PASSED
+tests/test_recipes_list.py::test_list_recipes_with_data PASSED
+tests/test_recipes_list.py::test_list_recipes_pagination PASSED
+tests/test_recipes_search.py::test_search_recipes PASSED
+tests/test_recipes_search.py::test_list_recipes_filter_by_category PASSED
+======================== 24 passed in 0.35s ======================
+```

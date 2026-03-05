@@ -122,7 +122,7 @@ class SQLiteRecipeDatabase(RecipeDatabase):
     ) -> Tuple[List[Recipe], int]:
         """List all recipes with filtering."""
         from database import RecipeModel
-        from sqlalchemy import select, or_, desc
+        from sqlalchemy import select, or_, desc, func
         import json
         
         query = select(RecipeModel)
@@ -147,17 +147,32 @@ class SQLiteRecipeDatabase(RecipeDatabase):
         if category:
             query = query.where(RecipeModel.category == category)
         
+        # Count total (before pagination)
+        count_query = select(func.count()).select_from(RecipeModel)
+        
+        # Re-apply filters to count query
+        if search:
+            search_lower = search.lower()
+            count_query = count_query.where(
+                or_(
+                    RecipeModel.title.ilike(f"%{search_lower}%"),
+                    RecipeModel.description.ilike(f"%{search_lower}%"),
+                )
+            )
+        if ingredient:
+            ingredient_lower = ingredient.lower()
+            count_query = count_query.filter(RecipeModel.ingredients.contains(ingredient_lower))
+        if category:
+            count_query = count_query.where(RecipeModel.category == category)
+        
+        count_result = await self.db.execute(count_query)
+        total_count = count_result.scalar() or 0
+        
         # Apply sorting
         if sort_by == "created_at":
             query = query.order_by(desc(RecipeModel.created_at))
         elif sort_by == "title":
             query = query.order_by(RecipeModel.title)
-        
-        # Count total
-        count_result = await self.db.execute(
-            select(RecipeModel).where(query.whereclause is not None)
-        )
-        total_count = len(count_result.all())
         
         # Apply pagination
         query = query.offset(skip).limit(limit)
