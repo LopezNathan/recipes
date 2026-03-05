@@ -159,6 +159,8 @@ pytest tests/ -v
 - Async tests with proper fixture setup/teardown
 - Each test is independent with isolated database state
 - Fast execution (~0.35 seconds for full suite)
+- All deprecation warnings fixed (uses `datetime.now(timezone.utc)` instead of deprecated `utcnow()`)
+- SQLAlchemy connection cleanup warnings suppressed (benign GC warnings)
 
 **Example output:**
 ```

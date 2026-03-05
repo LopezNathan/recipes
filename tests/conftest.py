@@ -61,7 +61,8 @@ def client():
         
         loop.run_until_complete(teardown())
         main.app.dependency_overrides.clear()
-        loop.close()
+        # Don't close the loop - let pytest handle cleanup
+        # Closing the loop here causes issues with background tasks
         
         # Delete the temp database file
         try:

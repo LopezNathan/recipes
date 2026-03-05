@@ -1,6 +1,7 @@
 """Database abstraction layer for recipes."""
 
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from models import Recipe, RecipeCreate, RecipeUpdate
 from typing import List, Optional, Tuple
 
@@ -87,8 +88,8 @@ class SQLiteRecipeDatabase(RecipeDatabase):
             prep_time=recipe.prep_time,
             cook_time=recipe.cook_time,
             category=recipe.category,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
         
         self.db.add(db_recipe)
@@ -249,7 +250,7 @@ class SQLiteRecipeDatabase(RecipeDatabase):
             else:
                 setattr(db_recipe, field, value)
         
-        db_recipe.updated_at = datetime.utcnow()
+        db_recipe.updated_at = datetime.now(timezone.utc)
         
         await self.db.commit()
         await self.db.refresh(db_recipe)
