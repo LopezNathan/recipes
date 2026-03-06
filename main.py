@@ -6,10 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest, RecipeImportRequest
+from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest, RecipeImportRequest, RecipePasteRequest
 from database import init_db, AsyncSessionLocal
 from db import SQLiteRecipeDatabase
 from scraper import scrape_recipe
+from recipe_parser import parse_recipe_content
 
 
 # Lifespan event handler for startup/shutdown
@@ -189,3 +190,62 @@ async def import_recipe(
     
     # Create recipe in database
     return await db.create(recipe_data)
+
+
+@app.post("/paste", response_model=Recipe)
+async def paste_recipe(paste_request: RecipePasteRequest, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
+    """
+    Paste in an AI-generated recipe in JSON or markdown format.
+    
+    Supports two formats:
+    
+    1. JSON format:
+    ```json
+    {
+        "title": "Recipe Name",
+        "description": "Optional description",
+        "ingredients": [
+            {"name": "flour", "quantity": "2 cups"},
+            "salt to taste"
+        ],
+        "instructions": "Step 1...\\nStep 2...",
+        "prep_time": 15,
+        "cook_time": 30,
+        "category": "dessert"
+    }
+    ```
+    
+    2. Markdown format:
+    ```
+    # Recipe Title
+    
+    Optional description here
+    
+    ## Ingredients
+    - 2 cups flour
+    - 1 egg
+    - salt to taste
+    
+    ## Instructions
+    1. Mix dry ingredients
+    2. Add wet ingredients
+    3. Bake at 350°F for 30 minutes
+    
+    ## Metadata
+    Prep Time: 15 minutes
+    Cook Time: 30 minutes
+    Category: Dessert
+    ```
+    """
+    # Parse the recipe content
+    recipe_data = parse_recipe_content(paste_request.content)
+    
+    if not recipe_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to parse recipe. Please check the format and try again."
+        )
+    
+    # Create recipe in database
+    return await db.create(recipe_data)
+

@@ -633,6 +633,19 @@
                     <div id="importStatus" style="margin-top: 10px; font-size: 0.9em;"></div>
                 </div>
 
+                <!-- Paste Recipe Section -->
+                <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--gray-200);">
+                    <h3 style="font-size: 1em; margin-bottom: 12px; color: var(--gray-700);">✨ Paste AI Recipe</h3>
+                    <p style="font-size: 0.9em; color: var(--gray-500); margin-bottom: 12px;">Paste a JSON or markdown formatted recipe</p>
+                    <textarea id="pasteContent" placeholder='{"title": "Recipe Name", "ingredients": [...], "instructions": "..."}'
+                        style="width: 100%; height: 150px; padding: 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-family: monospace; font-size: 0.9em; margin-bottom: 10px;"></textarea>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" id="pasteBtn" class="btn-primary" style="flex: 1;">Paste Recipe</button>
+                        <button type="button" id="pasteFormatBtn" class="btn-secondary" style="flex: 1; background: var(--gray-200); color: var(--gray-700);">Format Help</button>
+                    </div>
+                    <div id="pasteStatus" style="margin-top: 10px; font-size: 0.9em;"></div>
+                </div>
+
                 <form id="recipeForm">
                     <div class="form-group">
                         <label for="title">Recipe Title *</label>
@@ -782,6 +795,8 @@
             document.getElementById('resetBtn').addEventListener('click', resetForm);
             document.getElementById('addIngredientBtn').addEventListener('click', addIngredientField);
             document.getElementById('importBtn').addEventListener('click', handleImportRecipe);
+            document.getElementById('pasteBtn').addEventListener('click', handlePasteRecipe);
+            document.getElementById('pasteFormatBtn').addEventListener('click', showFormatHelp);
 
             document.getElementById('searchInput').addEventListener('input', debounce(() => {
                 currentPage = 1;
@@ -930,6 +945,82 @@
                 statusDiv.innerHTML = `❌ Error: ${error.message}`;
                 statusDiv.style.color = 'var(--danger)';
             }
+        }
+
+        async function handlePasteRecipe() {
+            const content = document.getElementById('pasteContent').value.trim();
+            const statusDiv = document.getElementById('pasteStatus');
+
+            if (!content) {
+                statusDiv.innerHTML = '⚠️ Please paste a recipe';
+                statusDiv.style.color = 'var(--warning)';
+                return;
+            }
+
+            statusDiv.innerHTML = '⏳ Parsing recipe...';
+            statusDiv.style.color = 'var(--primary)';
+
+            try {
+                const response = await fetch(`${API_URL}/paste`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
+                });
+
+                if (response.ok) {
+                    const recipe = await response.json();
+                    statusDiv.innerHTML = `✅ Added: "${recipe.title}"`;
+                    statusDiv.style.color = 'var(--success)';
+                    document.getElementById('pasteContent').value = '';
+                    loadRecipes();
+                } else {
+                    const error = await response.json();
+                    statusDiv.innerHTML = `❌ ${error.detail || 'Failed to parse recipe'}`;
+                    statusDiv.style.color = 'var(--danger)';
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ Error: ${error.message}`;
+                statusDiv.style.color = 'var(--danger)';
+            }
+        }
+
+        function showFormatHelp() {
+            const help = `
+JSON Format Example:
+{
+  "title": "Recipe Name",
+  "description": "Brief description",
+  "ingredients": [
+    {"name": "flour", "quantity": "2 cups"},
+    {"name": "sugar", "quantity": "1 cup"}
+  ],
+  "instructions": "Step 1.\\nStep 2.\\nStep 3.",
+  "prep_time": 15,
+  "cook_time": 30,
+  "category": "Dessert",
+  "image_url": "https://..."
+}
+
+Markdown Format Example:
+# Recipe Name
+Recipe description
+
+## Ingredients
+- 2 cups flour
+- 1 cup sugar
+
+## Instructions
+1. First step
+2. Second step
+
+## Metadata
+Prep Time: 15
+Cook Time: 30
+Category: Dessert
+Image URL: https://...
+            `.trim();
+            
+            alert(help);
         }
 
         async function handleUpdateRecipe(e) {

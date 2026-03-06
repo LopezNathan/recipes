@@ -40,6 +40,11 @@ class Recipe(RecipeBase):
     created_at: datetime
     updated_at: datetime
 
+
+class RecipePasteRequest(BaseModel):
+    """Request to paste in a recipe (JSON or text format)."""
+    content: str  # JSON or formatted text
+
     model_config = {"from_attributes": True}
 
 
