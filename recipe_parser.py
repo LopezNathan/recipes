@@ -6,6 +6,87 @@ from typing import Optional, Union
 from models import RecipeCreate, Ingredient
 
 
+def parse_ingredient(ingredient_str: str) -> dict:
+    """
+    Parse ingredient string to extract quantity and name.
+    
+    Handles multiple formats:
+    - "2 cups flour" -> {"quantity": "2 cups", "name": "flour"}
+    - "salt to taste" -> {"quantity": "", "name": "salt to taste"}
+    - "dried pasta • 10 oz" -> {"quantity": "10 oz", "name": "dried pasta"}
+    - "pound ground beef • 1" -> {"quantity": "1 pound", "name": "ground beef"}
+    - "cloves garlic • 3" -> {"quantity": "3 cloves", "name": "garlic"}
+    - "½ teaspoon salt" -> {"quantity": "½ teaspoon", "name": "salt"}
+    - "2–3 cups tomato sauce" -> {"quantity": "2–3 cups", "name": "tomato sauce"}
+    """
+    ingredient_str = ingredient_str.strip()
+    
+    # Common unit words that appear in ingredient names
+    unit_words = {
+        'pound': 'pound', 'pounds': 'pound', 'lb': 'lb', 'lbs': 'lbs',
+        'clove': 'clove', 'cloves': 'cloves',
+        'cup': 'cup', 'cups': 'cups',
+        'tablespoon': 'tablespoon', 'tablespoons': 'tablespoons', 'tbsp': 'tbsp',
+        'teaspoon': 'teaspoon', 'teaspoons': 'teaspoons', 'tsp': 'tsp',
+        'ounce': 'ounce', 'ounces': 'ounces', 'oz': 'oz',
+        'gram': 'gram', 'grams': 'grams', 'g': 'g',
+        'kilogram': 'kilogram', 'kilograms': 'kilograms', 'kg': 'kg',
+        'milliliter': 'milliliter', 'milliliters': 'milliliters', 'ml': 'ml',
+        'liter': 'liter', 'liters': 'liters', 'l': 'l',
+        'pint': 'pint', 'pints': 'pints',
+        'gallon': 'gallon', 'gallons': 'gallons',
+        'pinch': 'pinch', 'pinches': 'pinches',
+        'stick': 'stick', 'sticks': 'sticks',
+        'slice': 'slice', 'slices': 'slices',
+        'piece': 'piece', 'pieces': 'pieces',
+        'head': 'head', 'heads': 'heads',
+        'bulb': 'bulb', 'bulbs': 'bulbs',
+        'stalk': 'stalk', 'stalks': 'stalks',
+        'bunch': 'bunch', 'bunches': 'bunches',
+        'small': 'small', 'medium': 'medium', 'large': 'large',
+    }
+    
+    # If there's a bullet point, split on it and try to parse quantity from second part
+    if '•' in ingredient_str:
+        parts = ingredient_str.split('•')
+        name_part = parts[0].strip()
+        qty_part = parts[1].strip() if len(parts) > 1 else ""
+        
+        # Check if qty_part looks like a quantity (starts with number or fraction)
+        if qty_part and re.match(r'^[\d½⅓¼⅔¾⅛⅜⅝⅞]', qty_part):
+            # Check if name_part contains a unit word at the start
+            name_words = name_part.lower().split()
+            if name_words and name_words[0] in unit_words:
+                # Move the unit word from name to quantity
+                unit = name_words[0]
+                remaining_name = ' '.join(name_words[1:])
+                full_qty = f"{qty_part} {unit}"  # Use the original unit, not the mapped value
+                return {"quantity": full_qty, "name": remaining_name}
+            else:
+                # Just use the qty_part as is
+                return {"quantity": qty_part, "name": name_part}
+    
+    # Try to match quantity at the start
+    # Supports: numbers, fractions (½, ¼, etc.), ranges (2-3, 2–3)
+    # Units: cups, tbsp, tsp, oz, g, kg, ml, l, lbs, grams, cc, pints, gallons, teaspoons, tablespoons, pinch, pound, cloves, etc.
+    match = re.match(
+        r'^([\d\s\-–\/\.½⅓¼⅔¾⅛⅜⅝⅞]+\s*(?:cups?|tablespoons?|teaspoons?|tbsp|tsp|oz|g|kg|ml|l|lbs?|grams?|cc|pints?|gallons?|pinch(?:es)?|pounds?|pound|cloves?|clove|small|medium|large)?)\s+(.+)$',
+        ingredient_str,
+        re.IGNORECASE
+    )
+    
+    if match:
+        quantity = match.group(1).strip()
+        name = match.group(2).strip()
+        
+        # Make sure we actually captured a quantity
+        if re.search(r'[\d½⅓¼⅔¾⅛⅜⅝⅞]', quantity):
+            return {"quantity": quantity, "name": name}
+    
+    # No quantity found, entire string is the name
+    return {"quantity": "", "name": ingredient_str}
+
+
 def parse_recipe_json(content: str) -> Optional[RecipeCreate]:
     """
     Parse a recipe from JSON format.
@@ -115,10 +196,12 @@ def parse_recipe_markdown(content: str) -> Optional[RecipeCreate]:
             # Find all list items (- or * or numbers)
             for line in ing_text.split('\n'):
                 line = line.strip()
-                # Remove markdown list markers
-                line = re.sub(r'^[\-\*\d+\.]\s+', '', line).strip()
+                # Remove markdown list markers (-, *, or 1., 2., etc.)
+                line = re.sub(r'^[-\*]\s+|^\d+\.\s+', '', line).strip()
                 if line:
-                    ingredients.append(Ingredient(name=line))
+                    # Parse quantity and name (same as scraper.py)
+                    parsed = parse_ingredient(line)
+                    ingredients.append(Ingredient(name=parsed['name'], quantity=parsed['quantity']))
         
         if not ingredients:
             ingredients = [Ingredient(name="See instructions")]
