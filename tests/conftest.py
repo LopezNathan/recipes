@@ -4,6 +4,9 @@ import asyncio
 import pytest
 import tempfile
 import os
+import sys
+import io
+from contextlib import redirect_stderr
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 import main
@@ -55,11 +58,14 @@ def client():
         yield test_client
         
     finally:
-        # Cleanup
+        # Cleanup - suppress GC warnings to stderr
         async def teardown():
             await engine.dispose()
         
-        loop.run_until_complete(teardown())
+        # Redirect stderr to suppress GC warnings during cleanup
+        with redirect_stderr(io.StringIO()):
+            loop.run_until_complete(teardown())
+        
         main.app.dependency_overrides.clear()
         # Don't close the loop - let pytest handle cleanup
         # Closing the loop here causes issues with background tasks

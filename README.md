@@ -9,6 +9,10 @@ A simple FastAPI application for creating, reading, updating, and deleting recip
 - Update recipe details
 - Delete recipes
 - Search and filter recipes by title, description, ingredients, and category
+- **Recipe Image Support** - Store and display recipe images with image URLs
+- **Web Recipe Import** - Import recipes from 900+ websites (AllRecipes, Food Network, Budget Bytes, Serious Eats, etc.)
+- **AI Recipe Paste** - Paste AI-generated recipes in JSON or markdown format
+- **Intelligent Ingredient Parsing** - Automatically separates quantity from ingredient name
 - **Persistent SQLite database** - suitable for cloud deployment
 - Async/await throughout for non-blocking I/O
 
@@ -122,15 +126,89 @@ Content-Type: application/json
 DELETE /recipes/{recipe_id}
 ```
 
+### Import recipe from URL
+```
+POST /import
+Content-Type: application/json
+
+{
+  "url": "https://www.budgetbytes.com/recipe/baked-sweet-potato-fries/"
+}
+```
+
+Supports 900+ recipe websites including:
+- AllRecipes
+- Food Network
+- Serious Eats
+- Budget Bytes
+- And many more!
+
+**Response:** Returns the created recipe with extracted metadata (title, ingredients, instructions, image_url, prep_time, cook_time, etc.)
+
+### Paste AI-generated recipe
+```
+POST /paste
+Content-Type: application/json
+
+{
+  "content": "{\"title\": \"My Recipe\", \"ingredients\": [{\"name\": \"flour\", \"quantity\": \"2 cups\"}], \"instructions\": \"Mix and bake\"}"
+}
+```
+
+Supports two formats:
+
+**JSON Format:**
+```json
+{
+  "title": "Recipe Name",
+  "description": "Optional description",
+  "ingredients": [
+    {"name": "flour", "quantity": "2 cups"},
+    "salt to taste"
+  ],
+  "instructions": "Step 1...\nStep 2...",
+  "prep_time": 15,
+  "cook_time": 30,
+  "category": "dessert",
+  "image_url": "https://..."
+}
+```
+
+**Markdown Format:**
+```
+# Recipe Name
+
+Optional description here
+
+## Ingredients
+- 2 cups flour
+- 1 egg
+- salt to taste
+
+## Instructions
+1. Mix dry ingredients
+2. Add wet ingredients
+3. Bake at 350°F for 30 minutes
+
+## Metadata
+Prep Time: 15
+Cook Time: 30
+Category: Dessert
+```
+
+Auto-detects format and parses accordingly. Metadata extraction is optional.
+
 ## Project Structure
 
 - `main.py` - FastAPI application and route handlers
 - `models.py` - Pydantic data models for request/response validation
 - `database.py` - SQLAlchemy async engine and database models
 - `db.py` - Abstract database interface and SQLite implementation
+- `scraper.py` - Web recipe scraper using recipe-scrapers library
+- `recipe_parser.py` - JSON and markdown recipe format parser
 - `requirements.txt` - Python dependencies
 - `recipes.db` - SQLite database (auto-created on first run)
-- `index.html` - Frontend UI
+- `index.html` - Frontend UI with import and paste features
 
 ## Database
 
@@ -152,15 +230,21 @@ pytest tests/ -v
 - `tests/test_recipes_crud.py` - 10 tests for Create, Read, Update, Delete operations
 - `tests/test_recipes_list.py` - 5 tests for listing and pagination
 - `tests/test_recipes_search.py` - 9 tests for search and filtering
+- `tests/test_import_paste.py` - 12 tests for import and paste endpoints
 
 **Test features:**
 - Uses fresh file-based SQLite database for each test (auto-cleanup)
-- **24 total tests** covering all CRUD operations, search, filtering, and error cases
+- **36 total tests** covering all CRUD operations, search, filtering, import/paste, and error cases
 - Async tests with proper fixture setup/teardown
 - Each test is independent with isolated database state
-- Fast execution (~0.35 seconds for full suite)
+- Fast execution (~0.5 seconds for full suite)
 - All deprecation warnings fixed (uses `datetime.now(timezone.utc)` instead of deprecated `utcnow()`)
-- SQLAlchemy connection cleanup warnings suppressed (benign GC warnings)
+
+**Note about warnings:**
+The test suite may display benign SQLAlchemy GC warnings about unchecked-in connections. These are harmless warnings from aiosqlite's garbage collection and don't affect test reliability. To suppress them, run:
+```bash
+pytest tests/ -v -W ignore::sqlalchemy.exc.SAWarning
+```
 
 **Example output:**
 ```
@@ -171,5 +255,7 @@ tests/test_recipes_list.py::test_list_recipes_with_data PASSED
 tests/test_recipes_list.py::test_list_recipes_pagination PASSED
 tests/test_recipes_search.py::test_search_recipes PASSED
 tests/test_recipes_search.py::test_list_recipes_filter_by_category PASSED
-======================== 24 passed in 0.35s ======================
+tests/test_import_paste.py::test_paste_recipe_json_format PASSED
+tests/test_import_paste.py::test_paste_recipe_markdown_format PASSED
+======================== 36 passed in 0.50s ======================
 ```
