@@ -1,4 +1,4 @@
-"""FastAPI Recipe Application with SQLite."""
+"""FastAPI Recipe Application with SQLite - Dual API Setup."""
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import FileResponse
@@ -25,22 +25,47 @@ async def lifespan(app: FastAPI):
     print("👋 Shutting down")
 
 
-# Create FastAPI app
-app = FastAPI(
-    title="Recipe API",
+# ============================================================================
+# PUBLIC API (Read-only) - Port 8000
+# ============================================================================
+public_app = FastAPI(
+    title="Recipe API - Public (Read-Only)",
     version="1.0.0",
-    description="A simple recipe management API",
+    description="Public read-only recipe API. No authentication required.",
     lifespan=lifespan
 )
 
-# Enable CORS for frontend
-app.add_middleware(
+# Enable CORS for public API (only allow GET)
+public_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "HEAD", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+
+# ============================================================================
+# PRIVATE API (Read/Write) - Port 8001
+# ============================================================================
+private_app = FastAPI(
+    title="Recipe API - Private (Read/Write)",
+    version="1.0.0",
+    description="Private read/write recipe API. Access via Cloudflare tunnel only.",
+    lifespan=lifespan
+)
+
+# Enable CORS for private API (allow all methods)
+private_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Keep 'app' as alias for backward compatibility with testing
+app = private_app
 
 
 # Dependency to get database instance
@@ -49,68 +74,99 @@ async def get_recipe_db(session: AsyncSession = Depends(lambda: AsyncSessionLoca
     return SQLiteRecipeDatabase(session)
 
 
+# ============================================================================
+# SHARED READ-ONLY ROUTES (on both public_app and private_app)
+# ============================================================================
 
-# Routes
-@app.get("/")
-async def root():
-    """Serve the main HTML page."""
-    return FileResponse("index.html", media_type="text/html")
-
-
-@app.get("/recipes", response_model=dict)
-async def list_recipes(
-    skip: int = 0,
-    limit: int = 100,
-    search: str | None = None,
-    ingredient: str | None = None,
-    category: str | None = None,
-    sort_by: str = "created_at",
-    db: SQLiteRecipeDatabase = Depends(get_recipe_db),
-):
-    """
-    List all recipes with optional filtering and pagination.
+def setup_read_only_routes(fastapi_app: FastAPI):
+    """Register read-only routes on the given FastAPI app."""
     
-    Query parameters:
-    - skip: Number of recipes to skip (for pagination)
-    - limit: Maximum number of recipes to return
-    - search: Search in title and description
-    - ingredient: Filter by ingredient
-    - category: Filter by category
-    - sort_by: Sort field (created_at or title)
-    """
-    recipes, total = await db.list_all(
-        skip=skip,
-        limit=limit,
-        search=search,
-        ingredient=ingredient,
-        category=category,
-        sort_by=sort_by,
-    )
-    
-    return {
-        "recipes": recipes,
-        "total": total,
-        "skip": skip,
-        "limit": limit,
-    }
+    @fastapi_app.get("/")
+    async def root():
+        """Serve the main HTML page."""
+        return FileResponse("index.html", media_type="text/html")
+
+    @fastapi_app.get("/recipes", response_model=dict)
+    async def list_recipes(
+        skip: int = 0,
+        limit: int = 100,
+        search: str | None = None,
+        ingredient: str | None = None,
+        category: str | None = None,
+        sort_by: str = "created_at",
+        db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+    ):
+        """
+        List all recipes with optional filtering and pagination.
+        
+        Query parameters:
+        - skip: Number of recipes to skip (for pagination)
+        - limit: Maximum number of recipes to return
+        - search: Search in title and description
+        - ingredient: Filter by ingredient
+        - category: Filter by category
+        - sort_by: Sort field (created_at or title)
+        """
+        recipes, total = await db.list_all(
+            skip=skip,
+            limit=limit,
+            search=search,
+            ingredient=ingredient,
+            category=category,
+            sort_by=sort_by,
+        )
+        
+        return {
+            "recipes": recipes,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+        }
+
+    @fastapi_app.get("/recipes/{recipe_id}", response_model=Recipe)
+    async def get_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
+        """Get a specific recipe by ID."""
+        recipe = await db.get(recipe_id)
+        if not recipe:
+            raise HTTPException(status_code=404, detail="Recipe not found")
+        return recipe
+
+    @fastapi_app.post("/search", response_model=list[Recipe])
+    async def search_recipes(
+        search_request: SearchRequest,
+        db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+    ):
+        """
+        Advanced search across recipes.
+        
+        Body parameters:
+        - query: Search query string
+        - search_fields: Fields to search in (default: title, description)
+        - max_results: Maximum number of results to return
+        """
+        return await db.search(
+            query=search_request.query,
+            search_fields=search_request.search_fields,
+            max_results=search_request.max_results,
+        )
 
 
-@app.get("/recipes/{recipe_id}", response_model=Recipe)
-async def get_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
-    """Get a specific recipe by ID."""
-    recipe = await db.get(recipe_id)
-    if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
-    return recipe
+# Register read-only routes on both APIs
+setup_read_only_routes(public_app)
+setup_read_only_routes(private_app)
 
 
-@app.post("/recipes", response_model=Recipe, status_code=201)
+# ============================================================================
+# WRITE-ONLY ROUTES (on private_app only)
+# ============================================================================
+
+@private_app.post("/recipes", response_model=Recipe, status_code=201)
 async def create_recipe(recipe: RecipeCreate, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
     """Create a new recipe."""
     return await db.create(recipe)
 
 
-@app.put("/recipes/{recipe_id}", response_model=Recipe)
+@private_app.put("/recipes/{recipe_id}", response_model=Recipe)
 async def update_recipe(
     recipe_id: int,
     recipe_update: RecipeUpdate,
@@ -123,7 +179,7 @@ async def update_recipe(
     return recipe
 
 
-@app.delete("/recipes/{recipe_id}", status_code=204)
+@private_app.delete("/recipes/{recipe_id}", status_code=204)
 async def delete_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
     """Delete a recipe."""
     success = await db.delete(recipe_id)
@@ -132,27 +188,7 @@ async def delete_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_r
     return None
 
 
-@app.post("/search", response_model=list[Recipe])
-async def search_recipes(
-    search_request: SearchRequest,
-    db: SQLiteRecipeDatabase = Depends(get_recipe_db),
-):
-    """
-    Advanced search across recipes.
-    
-    Body parameters:
-    - query: Search query string
-    - search_fields: Fields to search in (default: title, description)
-    - max_results: Maximum number of results to return
-    """
-    return await db.search(
-        query=search_request.query,
-        search_fields=search_request.search_fields,
-        max_results=search_request.max_results,
-    )
-
-
-@app.post("/import", response_model=Recipe, status_code=201)
+@private_app.post("/import", response_model=Recipe, status_code=201)
 async def import_recipe(
     import_request: RecipeImportRequest,
     db: SQLiteRecipeDatabase = Depends(get_recipe_db),
@@ -192,7 +228,7 @@ async def import_recipe(
     return await db.create(recipe_data)
 
 
-@app.post("/paste", response_model=Recipe)
+@private_app.post("/paste", response_model=Recipe)
 async def paste_recipe(paste_request: RecipePasteRequest, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
     """
     Paste in an AI-generated recipe in JSON or markdown format.
@@ -248,4 +284,3 @@ async def paste_recipe(paste_request: RecipePasteRequest, db: SQLiteRecipeDataba
     
     # Create recipe in database
     return await db.create(recipe_data)
-

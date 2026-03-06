@@ -33,17 +33,33 @@ pip install -r requirements.txt
 
 ### 3. Run the Server
 
+The application provides two separate APIs:
+
+**Public API (Read-only) - Port 8000**
+```bash
+uvicorn main:public_app --port 8000 --reload
+```
+Available at `http://localhost:8000` - anyone can read recipes, but cannot create/edit/delete
+
+**Private API (Read/Write) - Port 8001**
+```bash
+uvicorn main:private_app --port 8001 --reload
+```
+Available at `http://localhost:8001` - intended for authenticated access via Cloudflare tunnel, supports all operations
+
+**For local development** (single API with all features):
 ```bash
 uvicorn main:app --reload
 ```
+This runs the private app on port 8000 with full read/write access.
 
-The API will be available at `http://localhost:8000`
 The database (`recipes.db`) will be created automatically on first run.
 
-### 3. API Documentation
+### 4. API Documentation
 
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+When running an API instance, documentation is available at:
+- **Swagger UI**: `http://localhost:{port}/docs`
+- **ReDoc**: `http://localhost:{port}/redoc`
 
 ## Endpoints
 
@@ -209,6 +225,60 @@ Auto-detects format and parses accordingly. Metadata extraction is optional.
 - `requirements.txt` - Python dependencies
 - `recipes.db` - SQLite database (auto-created on first run)
 - `index.html` - Frontend UI with import and paste features
+
+## Deployment with Cloudflare
+
+### Architecture
+
+This API is designed to run behind Cloudflare Tunnel with two separate endpoints:
+
+1. **Public API (Port 8000)** - Read-only access
+   - Anyone can view recipes without authentication
+   - Only supports GET requests and `/search` (POST)
+   - Perfect for sharing your recipe collection publicly
+   - Example: `https://recipes.example.com/recipes`
+
+2. **Private API (Port 8001)** - Read/Write access via Cloudflare Access
+   - Protected by Cloudflare Access (email/password or SSO)
+   - Supports all operations (create, edit, delete, import, paste)
+   - Only accessible through the Cloudflare Tunnel
+   - Example: `https://private-recipes.example.com/recipes`
+
+### Setup with Cloudflare Tunnel
+
+```bash
+# Terminal 1: Run public API
+uvicorn main:public_app --port 8000
+
+# Terminal 2: Run private API
+uvicorn main:private_app --port 8001
+
+# Terminal 3: Create Cloudflare Tunnel
+cloudflared tunnel run my-recipes-tunnel
+```
+
+### Cloudflare Configuration
+
+In `~/.cloudflared/config.yml`:
+
+```yaml
+tunnel: my-recipes-tunnel
+credentials-file: /Users/yourusername/.cloudflared/my-recipes-tunnel.json
+
+ingress:
+  # Public read-only API
+  - hostname: recipes.example.com
+    service: http://localhost:8000
+  
+  # Private read/write API (with Cloudflare Access policy)
+  - hostname: private-recipes.example.com
+    service: http://localhost:8001
+  
+  # Fallback
+  - service: http_status:404
+```
+
+Then set Cloudflare Access policy on `private-recipes.example.com` to require authentication.
 
 ## Database
 
