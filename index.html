@@ -346,6 +346,103 @@
             color: var(--text-primary);
         }
 
+        .cooking-instruction-timer {
+            margin-top: 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .timer-button {
+            padding: 8px 16px;
+            background: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+
+        .timer-button:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        .timer-display {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary);
+            color: var(--white);
+            padding: 20px 30px;
+            border-radius: 12px;
+            font-size: 1.8em;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+            z-index: 99999;
+            min-width: 160px;
+            text-align: center;
+            animation: slideIn 0.3s ease;
+            transition: all 0.3s ease;
+        }
+
+        .timer-display-label {
+            font-size: 0.7em;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .timer-display-text {
+            font-size: 2em;
+            line-height: 1;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(300px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .timer-display.completed {
+            animation: pulse 0.5s ease infinite;
+            background: var(--success);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .timer-display-close {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--white);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-display-close:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
         .main-content {
             display: grid;
             grid-template-columns: 380px 1fr;
@@ -1577,17 +1674,54 @@ Image URL: https://...
                 instructionsList.innerHTML = recipe.instructions
                     .split('\n')
                     .filter(line => line.trim())
-                    .map((instruction, idx) => `
-                        <div class="cooking-instruction-step" data-step-id="${idx}">
-                            <div class="cooking-instruction-step-number">${idx + 1}</div>
-                            <div class="cooking-instruction-text">${instruction.trim()}</div>
-                        </div>
-                    `).join('');
+                    .map((instruction, idx) => {
+                        // Extract time in minutes from instruction (e.g., "5 minutes", "30-45 minutes", "2-3 hours")
+                        const timeRegex = /(\d+)(?:\s*[-–]\s*(\d+))?\s*(?:minute|min|hour|hr|second|sec)/i;
+                        const timeMatch = instruction.match(timeRegex);
+                        let timerMinutes = null;
+                        
+                        if (timeMatch) {
+                            let timeValue = parseInt(timeMatch[1]);
+                            // If it's in hours, convert to minutes
+                            if (timeMatch[0].toLowerCase().includes('hour') || timeMatch[0].toLowerCase().includes('hr')) {
+                                timeValue = timeValue * 60;
+                            }
+                            timerMinutes = timeValue;
+                        }
+                        
+                        const hasTimer = timerMinutes !== null;
+                        
+                        const timerHTML = hasTimer ? `<div class="cooking-instruction-timer">
+                                    <button class="timer-button" data-seconds="${timerMinutes * 60}">⏱️ Start ${Math.floor(timerMinutes / 60) > 0 ? Math.floor(timerMinutes / 60) + 'h ' : ''}${timerMinutes % 60 || timerMinutes}m timer</button>
+                                </div>` : '';
+                        
+                        return `
+                            <div class="cooking-instruction-step" data-step-id="${idx}">
+                                <div class="cooking-instruction-step-number">${idx + 1}</div>
+                                <div class="cooking-instruction-text">${instruction.trim()}</div>
+                                ${timerHTML}
+                            </div>
+                        `;
+                    }).join('');
 
                 // Add event listeners to instructions
                 document.querySelectorAll('.cooking-instruction-step').forEach(step => {
-                    step.addEventListener('click', function() {
-                        this.classList.toggle('completed');
+                    step.addEventListener('click', function(e) {
+                        // Don't toggle completed if clicking on timer button
+                        if (!e.target.closest('.timer-button')) {
+                            this.classList.toggle('completed');
+                        }
+                    });
+                });
+
+                // Add event listeners to timer buttons
+                document.querySelectorAll('.timer-button').forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const seconds = parseInt(this.getAttribute('data-seconds'));
+                        if (seconds) {
+                            startTimer(seconds);
+                        }
                     });
                 });
 
@@ -1602,6 +1736,113 @@ Image URL: https://...
         function closeCookingMode() {
             document.getElementById('cookingMode').classList.remove('active');
             document.body.style.overflow = 'auto';
+            stopAllTimers(); // Stop all timers if running
+            timerCounter = 0; // Reset timer counter
+        }
+
+        // Timer Functions
+        let timers = new Map(); // Map of timerId -> {interval, display, seconds}
+        let timerCounter = 0;
+
+        function startTimer(seconds) {
+            console.log('startTimer called with', seconds, 'seconds');
+            
+            const timerId = timerCounter++;
+            let remainingSeconds = seconds;
+
+            // Create timer display element
+            const timerDisplay = document.createElement('div');
+            timerDisplay.className = 'timer-display';
+            timerDisplay.style.top = `${20 + (timerId * 140)}px`; // Stack timers vertically
+            timerDisplay.innerHTML = `
+                <button class="timer-display-close" onclick="stopTimer(${timerId})">✕</button>
+                <div class="timer-display-label">Timer ${timerId + 1}</div>
+                <div id="timerText-${timerId}" class="timer-display-text">${formatTime(remainingSeconds)}</div>
+            `;
+            document.body.appendChild(timerDisplay);
+
+            // Start interval
+            const timerInterval = setInterval(() => {
+                remainingSeconds--;
+                
+                const timerText = document.getElementById(`timerText-${timerId}`);
+                if (timerText) {
+                    timerText.textContent = formatTime(remainingSeconds);
+                }
+
+                // Timer complete
+                if (remainingSeconds <= 0) {
+                    clearInterval(timerInterval);
+                    timers.delete(timerId);
+                    
+                    if (timerDisplay) {
+                        timerDisplay.classList.add('completed');
+                        // Play sound notification
+                        playTimerSound();
+                        // Show alert
+                        showAlert(`Timer ${timerId + 1} finished! ⏱️`, 'success');
+                        
+                        // Auto-remove after 5 seconds
+                        setTimeout(() => {
+                            timerDisplay.remove();
+                        }, 5000);
+                    }
+                }
+            }, 1000);
+
+            // Store timer info
+            timers.set(timerId, {
+                interval: timerInterval,
+                display: timerDisplay,
+                seconds: seconds
+            });
+        }
+
+        function stopTimer(timerId) {
+            const timer = timers.get(timerId);
+            if (timer) {
+                clearInterval(timer.interval);
+                timer.display.remove();
+                timers.delete(timerId);
+            }
+        }
+
+        function stopAllTimers() {
+            for (const [timerId, timer] of timers) {
+                clearInterval(timer.interval);
+                timer.display.remove();
+            }
+            timers.clear();
+        }
+
+        function formatTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+
+            if (hours > 0) {
+                return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            }
+            return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function playTimerSound() {
+            // Create a simple beep sound using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.5);
         }
 
         // Dark Mode Toggle
