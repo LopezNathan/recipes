@@ -6,7 +6,7 @@
     <title>RecipeBox - Modern Recipe Management</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -15,47 +15,28 @@
         }
 
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --secondary: #ec4899;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --gray-900: #111827;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --secondary: #059669;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #d97706;
             --white: #ffffff;
-            
-            /* Light mode backgrounds */
-            --bg-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            --bg-secondary: var(--white);
-            --text-primary: var(--gray-900);
-            --text-secondary: var(--gray-600);
-            --border-color: var(--gray-200);
+
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --text-primary: #111111;
+            --text-secondary: #555555;
+            --border-color: #dddddd;
         }
 
         body.dark-mode {
-            --bg-primary: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            --bg-secondary: #1f2937;
-            --text-primary: var(--white);
-            --text-secondary: var(--gray-400);
-            --border-color: var(--gray-700);
-        }
-
-        body.light-mode {
-            --bg-primary: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            --bg-secondary: var(--white);
-            --text-primary: var(--gray-900);
-            --text-secondary: var(--gray-600);
-            --border-color: var(--gray-200);
+            --bg-primary: #111111;
+            --bg-secondary: #1a1a1a;
+            --text-primary: #f0f0f0;
+            --text-secondary: #aaaaaa;
+            --border-color: #333333;
         }
 
         html {
@@ -67,79 +48,131 @@
             background: var(--bg-primary);
             min-height: 100vh;
             color: var(--text-primary);
-            padding: 20px;
-            position: relative;
-            overflow-x: hidden;
             transition: background 0.3s ease, color 0.3s ease;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: -50%;
-            right: -10%;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            position: relative;
-            z-index: 1;
+            padding: 0 24px 40px;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 50px;
-            animation: fadeInDown 0.6s ease;
-        }
-
-        header h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 3.5em;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-            font-weight: 700;
-            letter-spacing: -1px;
-        }
-
-        header p {
-            font-size: 1.1em;
-            color: var(--text-secondary);
-            font-weight: 400;
-            letter-spacing: 0.5px;
-        }
-
-        .header-controls {
-            position: absolute;
-            top: 50px;
-            right: 20px;
-            display: flex;
-            gap: 12px;
-            align-items: center;
+        .navbar {
+            position: sticky;
+            top: 0;
             z-index: 100;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            height: 64px;
+        }
+
+        .page-content {
+            padding-top: 24px;
+        }
+
+        .navbar-brand {
+            font-size: 1.4em;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .page-tabs {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .tab-btn {
+            padding: 0 16px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            border-bottom: 3px solid transparent;
+            border-radius: 0;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: color 0.2s ease, border-color 0.2s ease;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+            border-bottom-color: rgba(99, 102, 241, 0.3);
+            transform: none;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .page-tabs .theme-toggle {
+            margin-left: 8px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.1em;
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .theme-toggle {
-            width: 45px;
-            height: 45px;
-            border-radius: 10px;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
             border: 2px solid var(--border-color);
             background: var(--bg-secondary);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4em;
+            font-size: 1.3em;
             transition: all 0.3s ease;
             color: var(--text-primary);
+            flex-shrink: 0;
+            margin-left: auto;
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+            transform: scale(1.05);
         }
 
         .cooking-mode {
@@ -384,6 +417,7 @@
             box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
             z-index: 99999;
             min-width: 160px;
+            max-width: 220px;
             text-align: center;
             animation: slideIn 0.3s ease;
             transition: all 0.3s ease;
@@ -394,6 +428,7 @@
             opacity: 0.9;
             margin-bottom: 8px;
             font-weight: 600;
+            word-break: break-word;
         }
 
         .timer-display-text {
@@ -443,38 +478,230 @@
             background: rgba(0, 0, 0, 0.4);
         }
 
-        .main-content {
-            display: grid;
-            grid-template-columns: 380px 1fr;
-            gap: 40px;
-            margin-bottom: 40px;
-        }
-
-        @media (max-width: 1024px) {
-            .main-content {
+        @media (max-width: 768px) {
+            .search-filters {
                 grid-template-columns: 1fr;
             }
 
-            header h1 {
-                font-size: 2.5em;
+            .navbar {
+                padding: 0 12px;
+                gap: 8px;
+            }
+
+            .navbar-brand {
+                font-size: 1.4em;
+            }
+
+            .tab-btn {
+                padding: 0 12px;
+                height: 50px;
+                font-size: 0.85em;
+            }
+
+            .page-tabs .theme-toggle {
+                width: 34px;
+                height: 34px;
+                margin-left: 4px;
+                font-size: 1em;
+            }
+
+            .page-tabs {
+                gap: 4px;
+            }
+
+            .card {
+                padding: 20px 16px;
+                margin-bottom: 20px;
+            }
+
+            .cooking-mode {
+                z-index: 9999;
+            }
+
+            .cooking-container {
+                max-width: 100%;
+                padding: 20px 16px;
+            }
+
+            .cooking-header {
+                margin-bottom: 24px;
+            }
+
+            .cooking-header h1 {
+                font-size: 1.8em;
+            }
+
+            .cooking-image {
+                max-height: 250px;
+            }
+
+            .cooking-meta {
+                gap: 12px;
+                padding: 16px;
+            }
+
+            .cooking-section h2 {
+                font-size: 1.3em;
+            }
+
+            .cooking-instruction-step {
+                padding: 16px;
+            }
+
+            .cooking-instruction-step-number {
+                width: 40px;
+                height: 40px;
+                font-size: 1em;
+            }
+
+            .cooking-instruction-text {
+                font-size: 1em;
+                line-height: 1.6;
+            }
+
+            .timer-display {
+                top: auto;
+                bottom: 20px;
+                right: 20px;
+                left: auto;
+                font-size: 1.4em;
+                padding: 16px 20px;
+                min-width: 140px;
+                max-width: 160px;
+            }
+
+            .timer-display-text {
+                font-size: 1.6em;
+            }
+
+            .modal {
+                padding: 20px 16px;
+            }
+
+            .modal-content {
+                max-width: 100%;
+                padding: 20px;
+            }
+
+            textarea, input[type="text"], input[type="email"], input[type="number"] {
+                font-size: 16px;
+            }
+
+            .btn {
+                padding: 12px 16px;
+                font-size: 0.95em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .navbar-brand {
+                font-size: 1.2em;
+            }
+
+            .tab-btn {
+                padding: 0 8px;
+                height: 46px;
+                font-size: 0.8em;
+            }
+
+            .btn {
+                padding: 10px 12px;
+                font-size: 0.9em;
+            }
+
+            .card {
+                padding: 16px 12px;
+                border-radius: 8px;
+            }
+
+            .cooking-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .cooking-header h1 {
+                font-size: 1.4em;
+            }
+
+            .cooking-close {
+                width: 40px;
+                height: 40px;
+                font-size: 1.4em;
+            }
+
+            .cooking-image {
+                max-height: 200px;
+            }
+
+            .cooking-meta {
+                grid-template-columns: 1fr;
+                gap: 8px;
+                padding: 12px;
+            }
+
+            .cooking-section h2 {
+                font-size: 1.1em;
+                margin-bottom: 12px;
+            }
+
+            .cooking-instruction-step {
+                padding: 12px;
+                grid-template-columns: 35px 1fr;
+                gap: 12px;
+            }
+
+            .cooking-instruction-step-number {
+                width: 35px;
+                height: 35px;
+                font-size: 0.9em;
+                margin-bottom: 0;
+            }
+
+            .cooking-instruction-text {
+                font-size: 0.95em;
+                line-height: 1.5;
+            }
+
+            .timer-display {
+                position: fixed;
+                bottom: 20px;
+                right: 10px;
+                left: auto;
+                width: auto;
+                min-width: 120px;
+                max-width: 140px;
+                font-size: 1.2em;
+                padding: 12px 16px;
+                top: auto;
+            }
+
+            .timer-display-text {
+                font-size: 1.4em;
+            }
+
+            .modal-content {
+                padding: 16px;
+            }
+
+            .modal textarea {
+                min-height: 150px;
+                font-size: 16px;
             }
         }
 
         .card {
             background: var(--bg-secondary);
-            border-radius: 16px;
+            border-radius: 8px;
             padding: 32px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
             border: 1px solid var(--border-color);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            animation: fadeInUp 0.6s ease;
+            transition: box-shadow 0.2s ease;
             color: var(--text-primary);
         }
 
         .card:hover {
-            box-shadow: 0 30px 90px rgba(99, 102, 241, 0.12);
-            border-color: rgba(99, 102, 241, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
         }
 
         .card h2 {
@@ -523,7 +750,7 @@
             outline: none;
             border-color: var(--primary);
             background: var(--bg-secondary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
 
         .button-group {
@@ -546,14 +773,13 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: var(--primary);
             color: var(--white);
             flex: 1;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+            background: var(--primary-dark);
         }
 
         .btn-primary:active {
@@ -561,19 +787,18 @@
         }
 
         .btn-secondary {
-            background: var(--gray-100);
-            color: var(--gray-700);
-            flex: 1;
-            border: 2px solid var(--gray-200);
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
         }
 
         .btn-secondary:hover {
-            background: var(--gray-200);
-            border-color: var(--gray-300);
+            background: var(--border-color);
+            border-color: var(--border-color);
         }
 
         .btn-danger {
-            background: rgba(239, 68, 68, 0.1);
+            background: var(--bg-secondary);
             color: var(--danger);
             border: 2px solid var(--danger);
             flex: initial;
@@ -631,79 +856,97 @@
 
         .recipes-list {
             display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .recipes-list {
+                grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+                gap: 16px;
+            }
         }
 
         .recipe-card {
             background: var(--bg-secondary);
             border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
             overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
             color: var(--text-primary);
-        }
-
-        .recipe-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
 
         .recipe-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 20px 50px rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .recipe-card:hover::before {
-            opacity: 1;
+        .recipe-card-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            display: block;
         }
 
-        .recipe-card h3 {
-            color: var(--gray-900);
-            margin-bottom: 10px;
-            font-size: 1.3em;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-        }
-
-        .recipe-card p {
-            color: var(--gray-600);
-            margin-bottom: 12px;
-            line-height: 1.6;
-            font-size: 0.95em;
-        }
-
-        .recipe-meta {
-            display: flex;
-            gap: 16px;
-            margin: 16px 0;
-            flex-wrap: wrap;
-        }
-
-        .meta-item {
+        .recipe-card-img-placeholder {
+            width: 100%;
+            height: 120px;
+            background: var(--bg-secondary);
             display: flex;
             align-items: center;
-            gap: 6px;
-            color: var(--gray-600);
-            font-size: 0.9em;
-            font-weight: 500;
+            justify-content: center;
+            font-size: 2.5em;
         }
 
-        .meta-item strong {
-            color: var(--primary);
+        .recipe-card-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .recipe-card-title {
+            font-size: 1.05em;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .recipe-card-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 0.82em;
+            color: var(--text-secondary);
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .recipe-card-actions {
+            margin-top: auto;
+            display: flex;
+            gap: 8px;
+        }
+
+        .recipe-card-actions .btn {
+            flex: 1;
+            font-size: 0.8em;
+            padding: 8px 10px;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        @media (max-width: 768px) {
+            .recipe-card-img {
+                height: 150px;
+            }
         }
 
         .ingredients-list {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%);
+            background: var(--bg-secondary);
             padding: 16px;
             border-radius: 10px;
             margin: 16px 0;
@@ -711,7 +954,7 @@
         }
 
         .ingredients-list h4 {
-            color: var(--gray-900);
+            color: var(--text-primary);
             margin-bottom: 10px;
             font-size: 0.95em;
             font-weight: 700;
@@ -726,12 +969,12 @@
         }
 
         .ingredients-list li {
-            color: var(--gray-700);
+            color: var(--text-primary);
             font-size: 0.9em;
         }
 
         .instructions-list {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+            background: var(--bg-secondary);
             padding: 16px;
             border-radius: 10px;
             margin: 16px 0;
@@ -739,7 +982,7 @@
         }
 
         .instructions-list h4 {
-            color: var(--gray-900);
+            color: var(--text-primary);
             margin-bottom: 10px;
             font-size: 0.95em;
             font-weight: 700;
@@ -754,7 +997,7 @@
         }
 
         .instructions-list li {
-            color: var(--gray-700);
+            color: var(--text-primary);
             font-size: 0.9em;
             line-height: 1.5;
         }
@@ -774,7 +1017,7 @@
         .empty-state {
             text-align: center;
             padding: 60px 20px;
-            color: var(--gray-500);
+            color: var(--text-secondary);
         }
 
         .empty-state p {
@@ -825,7 +1068,7 @@
         }
 
         .pagination .page-info {
-            color: var(--gray-600);
+            color: var(--text-secondary);
             font-size: 0.9em;
             font-weight: 500;
             margin: 0 10px;
@@ -864,7 +1107,7 @@
 
         .modal-header {
             font-size: 1.8em;
-            color: var(--gray-900);
+            color: var(--text-primary);
             margin-bottom: 24px;
             border-bottom: 2px solid var(--primary);
             padding-bottom: 16px;
@@ -878,7 +1121,7 @@
         .close-modal {
             font-size: 2em;
             cursor: pointer;
-            color: var(--gray-400);
+            color: var(--text-secondary);
             background: none;
             border: none;
             padding: 0;
@@ -887,7 +1130,7 @@
         }
 
         .close-modal:hover {
-            color: var(--gray-700);
+            color: var(--text-primary);
         }
 
         @keyframes fadeInDown {
@@ -948,7 +1191,7 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: var(--gray-100);
+            background: var(--border-color);
             border-radius: 10px;
         }
 
@@ -997,99 +1240,21 @@
     </div>
 
     <div class="container">
-        <header>
-            <h1>🍳 RecipeBox</h1>
-            <div class="header-controls">
-                <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">🌙</button>
-            </div>
-        </header>
-
         <div class="alert" id="alert"></div>
 
-        <div class="main-content">
-            <!-- Left: Add/Edit Recipe Form -->
-            <div class="card">
-                <h2 id="formTitle">Create Recipe</h2>
-                
-                <!-- Import from URL Section -->
-                <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--gray-200);">
-                    <h3 style="font-size: 1em; margin-bottom: 12px; color: var(--gray-700);">📱 Import from URL</h3>
-                    <p style="font-size: 0.9em; color: var(--gray-500); margin-bottom: 12px;">Paste a recipe URL from AllRecipes, Food Network, Serious Eats, and 900+ other sites</p>
-                    <div style="display: flex; gap: 8px;">
-                        <input type="url" id="importUrl" placeholder="https://www.budgetbytes.com/recipe..." style="flex: 1; padding: 10px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 0.9em;">
-                        <button type="button" id="importBtn" class="btn-primary" style="padding: 10px 20px;">Import</button>
-                    </div>
-                    <div id="importStatus" style="margin-top: 10px; font-size: 0.9em;"></div>
-                </div>
-
-                <!-- Paste Recipe Section -->
-                <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--gray-200);">
-                    <h3 style="font-size: 1em; margin-bottom: 12px; color: var(--gray-700);">✨ Paste AI Recipe</h3>
-                    <p style="font-size: 0.9em; color: var(--gray-500); margin-bottom: 12px;">Paste a JSON or markdown formatted recipe</p>
-                    <textarea id="pasteContent" placeholder='{"title": "Recipe Name", "ingredients": [...], "instructions": "..."}'
-                        style="width: 100%; height: 150px; padding: 12px; border: 1px solid var(--gray-300); border-radius: 6px; font-family: monospace; font-size: 0.9em; margin-bottom: 10px;"></textarea>
-                    <div style="display: flex; gap: 8px;">
-                        <button type="button" id="pasteBtn" class="btn-primary" style="flex: 1;">Paste Recipe</button>
-                        <button type="button" id="pasteFormatBtn" class="btn-secondary" style="flex: 1; background: var(--gray-200); color: var(--gray-700);">Format Help</button>
-                    </div>
-                    <div id="pasteStatus" style="margin-top: 10px; font-size: 0.9em;"></div>
-                </div>
-
-                <form id="recipeForm">
-                    <div class="form-group">
-                        <label for="title">Recipe Title *</label>
-                        <input type="text" id="title" placeholder="Spaghetti Carbonara" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="description">Description</label>
-                        <textarea id="description" placeholder="A classic Italian pasta dish..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Ingredients *</label>
-                        <div class="ingredients-container" id="ingredientsContainer">
-                            <div class="ingredient-item">
-                                <input type="text" placeholder="Ingredient name" class="ingredient-name" required>
-                                <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
-                                <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-secondary" id="addIngredientBtn" style="margin-top: 10px;">+ Add Ingredient</button>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="instructions">Instructions *</label>
-                        <textarea id="instructions" placeholder="Step-by-step cooking instructions..." required></textarea>
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="prepTime">Prep Time (min)</label>
-                            <input type="number" id="prepTime" placeholder="10" min="0">
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label for="cookTime">Cook Time (min)</label>
-                            <input type="number" id="cookTime" placeholder="20" min="0">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="imageUrl">Image URL</label>
-                        <input type="url" id="imageUrl" placeholder="https://example.com/recipe-image.jpg">
-                    </div>
-
-                    <div class="button-group">
-                        <button type="submit" class="btn-primary">Save Recipe</button>
-                        <button type="button" class="btn-secondary" id="resetBtn">Clear</button>
-                    </div>
-                </form>
+        <nav class="navbar">
+            <a class="navbar-brand" href="#" onclick="showPage('home'); return false;">🍳 RecipeBox</a>
+            <div class="page-tabs">
+                <button class="tab-btn active" onclick="showPage('home')">Home</button>
+                <button class="tab-btn" onclick="showPage('create')">Create</button>
+                <button class="tab-btn" onclick="showPage('import')">Import</button>
+                <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">🌙</button>
             </div>
+        </nav>
 
-            <!-- Right: Recipes Display -->
-            <div class="card">
-                <h2>Your Recipes</h2>
-
+        <div class="page-content">
+            <!-- Home Page -->
+            <div id="homePage" class="page active">
                 <div class="search-filters">
                     <input type="text" id="searchInput" placeholder="Search recipes...">
                     <input type="text" id="ingredientFilter" placeholder="Filter by ingredient...">
@@ -1108,6 +1273,94 @@
                         Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
                     </span>
                     <button class="btn-secondary" id="nextBtn">Next →</button>
+                </div>
+            </div>
+
+            <!-- Create Page -->
+            <div id="createPage" class="page">
+                <div class="card">
+                    <h2>Create New Recipe</h2>
+                    
+                    <form id="recipeForm">
+                        <div class="form-group">
+                            <label for="title">Recipe Title *</label>
+                            <input type="text" id="title" placeholder="Spaghetti Carbonara" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description">Description</label>
+                            <textarea id="description" placeholder="A classic Italian pasta dish..."></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Ingredients *</label>
+                            <div class="ingredients-container" id="ingredientsContainer">
+                                <div class="ingredient-item">
+                                    <input type="text" placeholder="Ingredient name" class="ingredient-name" required>
+                                    <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+                                    <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-secondary" id="addIngredientBtn" style="margin-top: 10px;">+ Add Ingredient</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="instructions">Instructions *</label>
+                            <textarea id="instructions" placeholder="Step-by-step cooking instructions..." required></textarea>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="prepTime">Prep Time (min)</label>
+                                <input type="number" id="prepTime" placeholder="10" min="0">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="cookTime">Cook Time (min)</label>
+                                <input type="number" id="cookTime" placeholder="20" min="0">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="imageUrl">Image URL</label>
+                            <input type="url" id="imageUrl" placeholder="https://example.com/recipe-image.jpg">
+                        </div>
+
+                        <div class="button-group">
+                            <button type="submit" class="btn-primary">Save Recipe</button>
+                            <button type="button" class="btn-secondary" id="resetBtn">Clear</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Import Page -->
+            <div id="importPage" class="page">
+                <div class="card">
+                    <h2>Import Recipe</h2>
+                    
+                    <!-- Import from URL Section -->
+                    <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color);">
+                        <h3 style="font-size: 1em; margin-bottom: 12px; color: var(--text-primary);">📱 Import from URL</h3>
+                        <p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 12px;">Paste a recipe URL from AllRecipes, Food Network, Serious Eats, and 900+ other sites</p>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <input type="url" id="importUrl" placeholder="https://www.budgetbytes.com/recipe..." style="flex: 1; min-width: 250px; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.9em;">
+                            <button type="button" id="importBtn" class="btn-primary" style="padding: 10px 20px;">Import</button>
+                        </div>
+                        <div id="importStatus" style="margin-top: 10px; font-size: 0.9em;"></div>
+                    </div>
+
+                    <!-- Paste Recipe Section -->
+                    <div>
+                        <h3 style="font-size: 1em; margin-bottom: 12px; color: var(--text-primary);">✨ Paste AI Recipe</h3>
+                        <p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 12px;">Paste a JSON or markdown formatted recipe</p>
+                        <textarea id="pasteContent" placeholder='{"title": "Recipe Name", "ingredients": [...], "instructions": "..."}'
+                            style="width: 100%; height: 200px; padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-family: monospace; font-size: 0.9em; margin-bottom: 10px; color: var(--text-primary); background: var(--bg-secondary);"></textarea>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" id="pasteBtn" class="btn-primary" style="flex: 1; min-width: 150px;">Paste Recipe</button>
+                            <button type="button" id="pasteFormatBtn" class="btn-secondary" style="flex: 1; min-width: 150px;">Format Help</button>
+                        </div>
+                        <div id="pasteStatus" style="margin-top: 10px; font-size: 0.9em;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1468,55 +1721,28 @@ Image URL: https://...
                 return;
             }
 
-            container.innerHTML = recipes.map(recipe => `
-                <div class="recipe-card">
-                    ${recipe.image_url ? `<div style="width: calc(100% + 48px); margin: -24px -24px 20px -24px; height: 200px; overflow: hidden; border-radius: 12px 12px 0 0; position: relative;">
-                        <img src="${recipe.image_url}" alt="${recipe.title}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
-                        <div style="position: absolute; inset: 0; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.1) 100%);"></div>
-                    </div>` : ''}
-                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; margin-bottom: 12px;">
-                        <h3 style="color: var(--text-primary); font-size: 1.3em; font-weight: 700; line-height: 1.4; margin: 0;">${recipe.title}</h3>
-                        <button class="btn-danger" onclick="deleteRecipe(${recipe.id})" style="padding: 8px 12px; font-size: 0.75em; margin: 0;">🗑️ Delete</button>
-                    </div>
-                    
-                    ${recipe.description ? `<p style="color: var(--text-secondary); margin-bottom: 16px; line-height: 1.6; font-size: 0.95em;">${recipe.description}</p>` : ''}
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; padding: 16px; background: rgba(99, 102, 241, 0.05); border-radius: 8px;">
-                        ${recipe.prep_time ? `<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 1.2em;">⏱️</span><div><div style="font-size: 0.85em; color: var(--text-secondary);">Prep</div><div style="font-weight: 700; color: var(--text-primary);">${recipe.prep_time}m</div></div></div>` : ''}
-                        ${recipe.cook_time ? `<div style="display: flex; align-items: center; gap: 8px;"><span style="font-size: 1.2em;">🔥</span><div><div style="font-size: 0.85em; color: var(--text-secondary);">Cook</div><div style="font-weight: 700; color: var(--text-primary);">${recipe.cook_time}m</div></div></div>` : ''}
-                    </div>
+            container.innerHTML = recipes.map(recipe => {
+                const img = recipe.image_url
+                    ? `<img class="recipe-card-img" src="${recipe.image_url}" alt="${recipe.title}">`
+                    : `<div class="recipe-card-img-placeholder">🍽️</div>`;
 
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="color: var(--text-primary); font-size: 0.95em; font-weight: 700; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8;">Ingredients</h4>
-                        <ul style="list-style: none; color: var(--text-secondary); line-height: 1.8; font-size: 0.95em;">
-                            ${recipe.ingredients.map(ing => {
-                                const name = typeof ing === 'string' ? ing : ing.name;
-                                const qty = typeof ing === 'string' ? '' : (ing.quantity ? ` • ${ing.quantity}` : '');
-                                return `<li style="padding: 6px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;">
-                                    <span>${name}</span>${qty ? `<span style="text-align: right; color: var(--text-primary); font-weight: 500;">${qty}</span>` : ''}
-                                </li>`;
-                            }).join('')}
-                        </ul>
-                    </div>
+                const metaParts = [];
+                if (recipe.prep_time) metaParts.push(`⏱️ ${recipe.prep_time}m prep`);
+                if (recipe.cook_time) metaParts.push(`🔥 ${recipe.cook_time}m cook`);
 
-                    <div style="margin-bottom: 20px;">
-                        <h4 style="color: var(--text-primary); font-size: 0.95em; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.8;">Instructions</h4>
-                        <div style="display: grid; gap: 12px;">
-                            ${recipe.instructions.split('\n').filter(line => line.trim()).map((instruction, idx) => `
-                                <div style="display: grid; grid-template-columns: 50px 1fr; gap: 16px; padding: 16px; background: rgba(99, 102, 241, 0.03); border-left: 4px solid var(--primary); border-radius: 6px; align-items: start;">
-                                    <div style="width: 40px; height: 40px; background: var(--primary); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1em; flex-shrink: 0;">${idx + 1}</div>
-                                    <div style="padding-top: 4px; color: var(--text-primary); line-height: 1.6; font-size: 0.95em;">
-                                        ${instruction.trim()}
-                                    </div>
-                                </div>
-                            `).join('')}
+                return `
+                <div class="recipe-card" onclick="openCookingMode(${recipe.id})">
+                    ${img}
+                    <div class="recipe-card-body">
+                        <div class="recipe-card-title">${recipe.title}</div>
+                        ${metaParts.length ? `<div class="recipe-card-meta">${metaParts.join(' · ')}</div>` : ''}
+                        <div class="recipe-card-actions" onclick="event.stopPropagation()">
+                            <button class="btn-secondary" onclick="openEditModal(${recipe.id})">Edit</button>
+                            <button class="btn-danger" onclick="deleteRecipe(${recipe.id})">Delete</button>
                         </div>
                     </div>
-
-                    <button class="btn-primary" onclick="openEditModal(${recipe.id})" style="width: 100%;">✏️ Edit Recipe</button>
-                    <button class="btn-secondary" onclick="openCookingMode(${recipe.id})" style="width: 100%; margin-top: 12px;">🍳 Cooking Mode</button>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         function updatePagination(total) {
@@ -1753,7 +1979,16 @@ Image URL: https://...
             // Create timer display element
             const timerDisplay = document.createElement('div');
             timerDisplay.className = 'timer-display';
-            timerDisplay.style.top = `${20 + (timerId * 140)}px`; // Stack timers vertically
+            
+            // Use bottom positioning on mobile (< 768px), top positioning on desktop
+            if (window.innerWidth < 768) {
+                timerDisplay.style.bottom = `${20 + (timerId * 100)}px`;
+                timerDisplay.style.top = 'auto';
+            } else {
+                timerDisplay.style.top = `${20 + (timerId * 140)}px`;
+                timerDisplay.style.bottom = 'auto';
+            }
+            
             timerDisplay.innerHTML = `
                 <button class="timer-display-close" onclick="stopTimer(${timerId})">✕</button>
                 <div class="timer-display-label">Timer ${timerId + 1}</div>
@@ -1869,6 +2104,36 @@ Image URL: https://...
         function updateThemeToggle(theme) {
             const toggle = document.getElementById('themeToggle');
             toggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // Page Navigation
+        function showPage(pageName) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+
+            // Remove active from all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected page
+            const pageElement = document.getElementById(pageName + 'Page');
+            if (pageElement) {
+                pageElement.classList.add('active');
+            }
+
+            // Mark selected tab as active
+            event.target.classList.add('active');
+
+            // Load recipes when showing home page
+            if (pageName === 'home') {
+                loadRecipes();
+            }
+
+            // Scroll to top
+            window.scrollTo(0, 0);
         }
 
         // Initialize on page load
