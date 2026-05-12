@@ -4,8 +4,6 @@ pydantic
 pytest
 pytest-asyncio
 httpx
-sqlalchemy
-aiosqlite
-greenlet
+asyncpg
 recipe-scrapers
 python-dotenv

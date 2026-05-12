@@ -34,5 +34,8 @@ wheels/
 *.db
 *.sqlite3
 
+# Environment
+.env
+
 # OS
 .DS_Store

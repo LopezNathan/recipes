@@ -1,24 +1,23 @@
 """Database abstraction layer for recipes."""
 
+import json
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from models import Recipe, RecipeCreate, RecipeUpdate
 from typing import List, Optional, Tuple
+
+from models import Recipe, RecipeCreate, RecipeUpdate
 
 
 class RecipeDatabase(ABC):
-    """Abstract base class for recipe database implementations."""
-    
+
     @abstractmethod
     async def create(self, recipe: RecipeCreate) -> Recipe:
-        """Create a new recipe and return it with ID."""
         pass
-    
+
     @abstractmethod
     async def get(self, recipe_id: int) -> Optional[Recipe]:
-        """Get a recipe by ID."""
         pass
-    
+
     @abstractmethod
     async def list_all(
         self,
@@ -27,92 +26,88 @@ class RecipeDatabase(ABC):
         search: Optional[str] = None,
         ingredient: Optional[str] = None,
         category: Optional[str] = None,
-        sort_by: str = "created_at"
+        sort_by: str = "created_at",
     ) -> Tuple[List[Recipe], int]:
-        """
-        List all recipes with filtering.
-        Returns tuple of (recipes, total_count).
-        """
         pass
-    
+
     @abstractmethod
     async def search(
         self,
         query: str,
         search_fields: Optional[List[str]] = None,
-        max_results: int = 10
+        max_results: int = 10,
     ) -> List[Recipe]:
-        """Advanced search across specified fields."""
         pass
-    
+
     @abstractmethod
     async def update(self, recipe_id: int, recipe_update: RecipeUpdate) -> Optional[Recipe]:
-        """Update a recipe and return updated recipe or None if not found."""
         pass
-    
+
     @abstractmethod
     async def delete(self, recipe_id: int) -> bool:
-        """Delete a recipe. Returns True if deleted, False if not found."""
         pass
 
 
-class SQLiteRecipeDatabase(RecipeDatabase):
-    """SQLite implementation using SQLAlchemy."""
-    
-    def __init__(self, db_session):
-        """Initialize with SQLAlchemy session."""
-        self.db = db_session
-    
+def _serialize_ingredients(ingredients) -> list:
+    result = []
+    for ing in ingredients:
+        if isinstance(ing, dict):
+            result.append(ing)
+        elif hasattr(ing, "model_dump"):
+            result.append(ing.model_dump())
+        else:
+            result.append({"name": str(ing)})
+    return result
+
+
+def _to_recipe(row) -> Recipe:
+    ingredients = row["ingredients"]
+    if isinstance(ingredients, str):
+        ingredients = json.loads(ingredients)
+    return Recipe(
+        id=row["id"],
+        title=row["title"],
+        description=row["description"],
+        ingredients=ingredients,
+        instructions=row["instructions"],
+        prep_time=row["prep_time"],
+        cook_time=row["cook_time"],
+        category=row["category"],
+        image_url=row["image_url"],
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+class PostgresRecipeDatabase(RecipeDatabase):
+
+    def __init__(self, conn):
+        self.conn = conn
+
     async def create(self, recipe: RecipeCreate) -> Recipe:
-        """Create a new recipe."""
-        from database import RecipeModel
-        from datetime import datetime
-        from sqlalchemy import select
-        
-        # Serialize ingredients - convert Pydantic models to dicts
-        ingredients_data = []
-        for ing in recipe.ingredients:
-            if isinstance(ing, dict):
-                ingredients_data.append(ing)
-            elif hasattr(ing, 'model_dump'):  # Pydantic model
-                ingredients_data.append(ing.model_dump())
-            else:
-                ingredients_data.append({"name": str(ing)})
-        
-        # Create model instance
-        db_recipe = RecipeModel(
-            title=recipe.title,
-            description=recipe.description,
-            ingredients=ingredients_data,
-            instructions=recipe.instructions,
-            prep_time=recipe.prep_time,
-            cook_time=recipe.cook_time,
-            category=recipe.category,
-            image_url=recipe.image_url,
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
+        row = await self.conn.fetchrow(
+            """
+            INSERT INTO recipes
+                (title, description, ingredients, instructions,
+                 prep_time, cook_time, category, image_url)
+            VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8)
+            RETURNING *
+            """,
+            recipe.title,
+            recipe.description,
+            json.dumps(_serialize_ingredients(recipe.ingredients)),
+            recipe.instructions,
+            recipe.prep_time,
+            recipe.cook_time,
+            recipe.category,
+            recipe.image_url,
         )
-        
-        self.db.add(db_recipe)
-        await self.db.commit()
-        await self.db.refresh(db_recipe)
-        
-        return self._to_recipe(db_recipe)
-    
+        return _to_recipe(row)
+
     async def get(self, recipe_id: int) -> Optional[Recipe]:
-        """Get a recipe by ID."""
-        from database import RecipeModel
-        from sqlalchemy import select
-        
-        result = await self.db.execute(
-            select(RecipeModel).where(RecipeModel.id == recipe_id)
-        )
-        db_recipe = result.scalar_one_or_none()
-        
-        if db_recipe:
-            return self._to_recipe(db_recipe)
-        return None
-    
+        row = await self.conn.fetchrow("SELECT * FROM recipes WHERE id = $1", recipe_id)
+        return _to_recipe(row) if row else None
+
     async def list_all(
         self,
         skip: int = 0,
@@ -120,176 +115,90 @@ class SQLiteRecipeDatabase(RecipeDatabase):
         search: Optional[str] = None,
         ingredient: Optional[str] = None,
         category: Optional[str] = None,
-        sort_by: str = "created_at"
+        sort_by: str = "created_at",
     ) -> Tuple[List[Recipe], int]:
-        """List all recipes with filtering."""
-        from database import RecipeModel
-        from sqlalchemy import select, or_, desc, func
-        import json
-        
-        query = select(RecipeModel)
-        
-        # Apply search filter
+        conditions: list[str] = []
+        params: list = []
+
         if search:
-            search_lower = search.lower()
-            query = query.where(
-                or_(
-                    RecipeModel.title.ilike(f"%{search_lower}%"),
-                    RecipeModel.description.ilike(f"%{search_lower}%"),
-                )
-            )
-        
-        # Apply ingredient filter
+            params.append(f"%{search}%")
+            conditions.append(f"(title ILIKE ${len(params)} OR description ILIKE ${len(params)})")
+
         if ingredient:
-            ingredient_lower = ingredient.lower()
-            # This is a simple filter - in production you might want more sophisticated matching
-            query = query.filter(RecipeModel.ingredients.contains(ingredient_lower))
-        
-        # Apply category filter
+            params.append(f"%{ingredient}%")
+            conditions.append(f"ingredients::text ILIKE ${len(params)}")
+
         if category:
-            query = query.where(RecipeModel.category == category)
-        
-        # Count total (before pagination)
-        count_query = select(func.count()).select_from(RecipeModel)
-        
-        # Re-apply filters to count query
-        if search:
-            search_lower = search.lower()
-            count_query = count_query.where(
-                or_(
-                    RecipeModel.title.ilike(f"%{search_lower}%"),
-                    RecipeModel.description.ilike(f"%{search_lower}%"),
-                )
-            )
-        if ingredient:
-            ingredient_lower = ingredient.lower()
-            count_query = count_query.filter(RecipeModel.ingredients.contains(ingredient_lower))
-        if category:
-            count_query = count_query.where(RecipeModel.category == category)
-        
-        count_result = await self.db.execute(count_query)
-        total_count = count_result.scalar() or 0
-        
-        # Apply sorting
-        if sort_by == "created_at":
-            query = query.order_by(desc(RecipeModel.created_at))
-        elif sort_by == "title":
-            query = query.order_by(RecipeModel.title)
-        
-        # Apply pagination
-        query = query.offset(skip).limit(limit)
-        
-        result = await self.db.execute(query)
-        db_recipes = result.scalars().all()
-        
-        recipes = [self._to_recipe(r) for r in db_recipes]
-        return recipes, total_count
-    
+            params.append(category)
+            conditions.append(f"category = ${len(params)}")
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+        total = await self.conn.fetchval(f"SELECT COUNT(*) FROM recipes {where}", *params)
+
+        order = "ORDER BY created_at DESC" if sort_by == "created_at" else "ORDER BY title ASC"
+        params.append(limit)
+        params.append(skip)
+        rows = await self.conn.fetch(
+            f"SELECT * FROM recipes {where} {order} LIMIT ${len(params) - 1} OFFSET ${len(params)}",
+            *params,
+        )
+
+        return [_to_recipe(r) for r in rows], total
+
     async def search(
         self,
         query: str,
         search_fields: Optional[List[str]] = None,
-        max_results: int = 10
+        max_results: int = 10,
     ) -> List[Recipe]:
-        """Advanced search across specified fields."""
-        from database import RecipeModel
-        from sqlalchemy import select, or_
-        
         if not search_fields:
             search_fields = ["title", "description"]
-        
-        query_lower = query.lower()
+
         conditions = []
-        
         if "title" in search_fields:
-            conditions.append(RecipeModel.title.ilike(f"%{query_lower}%"))
+            conditions.append("title ILIKE $1")
         if "description" in search_fields:
-            conditions.append(RecipeModel.description.ilike(f"%{query_lower}%"))
+            conditions.append("description ILIKE $1")
         if "ingredients" in search_fields:
-            conditions.append(RecipeModel.ingredients.contains(query_lower))
-        
+            conditions.append("ingredients::text ILIKE $1")
+
         if not conditions:
             return []
-        
-        result = await self.db.execute(
-            select(RecipeModel)
-            .where(or_(*conditions))
-            .limit(max_results)
+
+        rows = await self.conn.fetch(
+            f"SELECT * FROM recipes WHERE {' OR '.join(conditions)} LIMIT $2",
+            f"%{query}%",
+            max_results,
         )
-        db_recipes = result.scalars().all()
-        
-        return [self._to_recipe(r) for r in db_recipes]
-    
+        return [_to_recipe(r) for r in rows]
+
     async def update(self, recipe_id: int, recipe_update: RecipeUpdate) -> Optional[Recipe]:
-        """Update a recipe."""
-        from database import RecipeModel
-        from datetime import datetime
-        from sqlalchemy import select
-        
-        result = await self.db.execute(
-            select(RecipeModel).where(RecipeModel.id == recipe_id)
-        )
-        db_recipe = result.scalar_one_or_none()
-        
-        if not db_recipe:
-            return None
-        
-        # Update fields that are provided
         update_data = recipe_update.model_dump(exclude_unset=True)
-        for field, value in update_data.items():
-            if field == "ingredients" and value is not None:
-                # Serialize ingredients
-                ingredients_data = []
-                for ing in value:
-                    if isinstance(ing, dict):
-                        ingredients_data.append(ing)
-                    elif hasattr(ing, 'model_dump'):  # Pydantic model
-                        ingredients_data.append(ing.model_dump())
-                    else:
-                        ingredients_data.append({"name": str(ing)})
-                setattr(db_recipe, field, ingredients_data)
+        if not update_data:
+            return await self.get(recipe_id)
+
+        set_parts: list[str] = []
+        params: list = []
+
+        for key, value in update_data.items():
+            if key == "ingredients":
+                params.append(json.dumps(_serialize_ingredients(value or [])))
+                set_parts.append(f"{key} = ${len(params)}::jsonb")
             else:
-                setattr(db_recipe, field, value)
-        
-        db_recipe.updated_at = datetime.now(timezone.utc)
-        
-        await self.db.commit()
-        await self.db.refresh(db_recipe)
-        
-        return self._to_recipe(db_recipe)
-    
+                params.append(value)
+                set_parts.append(f"{key} = ${len(params)}")
+
+        params.append(datetime.now(timezone.utc))
+        set_parts.append(f"updated_at = ${len(params)}")
+
+        params.append(recipe_id)
+        row = await self.conn.fetchrow(
+            f"UPDATE recipes SET {', '.join(set_parts)} WHERE id = ${len(params)} RETURNING *",
+            *params,
+        )
+        return _to_recipe(row) if row else None
+
     async def delete(self, recipe_id: int) -> bool:
-        """Delete a recipe."""
-        from database import RecipeModel
-        from sqlalchemy import select
-        
-        result = await self.db.execute(
-            select(RecipeModel).where(RecipeModel.id == recipe_id)
-        )
-        db_recipe = result.scalar_one_or_none()
-        
-        if not db_recipe:
-            return False
-        
-        await self.db.delete(db_recipe)
-        await self.db.commit()
-        return True
-    
-    @staticmethod
-    def _to_recipe(db_recipe) -> Recipe:
-        """Convert database model to Pydantic recipe."""
-        from models import Recipe
-        
-        return Recipe(
-            id=db_recipe.id,
-            title=db_recipe.title,
-            description=db_recipe.description,
-            ingredients=db_recipe.ingredients,
-            instructions=db_recipe.instructions,
-            prep_time=db_recipe.prep_time,
-            cook_time=db_recipe.cook_time,
-            category=db_recipe.category,
-            image_url=db_recipe.image_url,
-            created_at=db_recipe.created_at,
-            updated_at=db_recipe.updated_at,
-        )
+        result = await self.conn.execute("DELETE FROM recipes WHERE id = $1", recipe_id)
+        return result != "DELETE 0"

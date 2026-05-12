@@ -1,28 +1,22 @@
-"""FastAPI Recipe Application with SQLite - Dual API Setup."""
+"""FastAPI Recipe Application - Dual API Setup."""
 
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest, RecipeImportRequest, RecipePasteRequest
-from database import init_db, AsyncSessionLocal
-from db import SQLiteRecipeDatabase
+from database import init_db, close_db, get_pool
+from db import PostgresRecipeDatabase
 from scraper import scrape_recipe
 from recipe_parser import parse_recipe_content
 
 
-# Lifespan event handler for startup/shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database on startup, cleanup on shutdown."""
-    # Startup
     await init_db()
-    print("✅ Database initialized")
     yield
-    # Shutdown
-    print("👋 Shutting down")
+    await close_db()
 
 
 # ============================================================================
@@ -69,9 +63,10 @@ app = private_app
 
 
 # Dependency to get database instance
-async def get_recipe_db(session: AsyncSession = Depends(lambda: AsyncSessionLocal())) -> SQLiteRecipeDatabase:
-    """Get SQLite recipe database."""
-    return SQLiteRecipeDatabase(session)
+async def get_recipe_db() -> PostgresRecipeDatabase:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        yield PostgresRecipeDatabase(conn)
 
 
 # ============================================================================
@@ -94,7 +89,7 @@ def setup_read_only_routes(fastapi_app: FastAPI):
         ingredient: str | None = None,
         category: str | None = None,
         sort_by: str = "created_at",
-        db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+        db: PostgresRecipeDatabase = Depends(get_recipe_db),
     ):
         """
         List all recipes with optional filtering and pagination.
@@ -124,7 +119,7 @@ def setup_read_only_routes(fastapi_app: FastAPI):
         }
 
     @fastapi_app.get("/recipes/{recipe_id}", response_model=Recipe)
-    async def get_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
+    async def get_recipe(recipe_id: int, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
         """Get a specific recipe by ID."""
         recipe = await db.get(recipe_id)
         if not recipe:
@@ -134,7 +129,7 @@ def setup_read_only_routes(fastapi_app: FastAPI):
     @fastapi_app.post("/search", response_model=list[Recipe])
     async def search_recipes(
         search_request: SearchRequest,
-        db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+        db: PostgresRecipeDatabase = Depends(get_recipe_db),
     ):
         """
         Advanced search across recipes.
@@ -161,7 +156,7 @@ setup_read_only_routes(private_app)
 # ============================================================================
 
 @private_app.post("/recipes", response_model=Recipe, status_code=201)
-async def create_recipe(recipe: RecipeCreate, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
+async def create_recipe(recipe: RecipeCreate, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
     """Create a new recipe."""
     return await db.create(recipe)
 
@@ -170,7 +165,7 @@ async def create_recipe(recipe: RecipeCreate, db: SQLiteRecipeDatabase = Depends
 async def update_recipe(
     recipe_id: int,
     recipe_update: RecipeUpdate,
-    db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+    db: PostgresRecipeDatabase = Depends(get_recipe_db),
 ):
     """Update a recipe."""
     recipe = await db.update(recipe_id, recipe_update)
@@ -180,7 +175,7 @@ async def update_recipe(
 
 
 @private_app.delete("/recipes/{recipe_id}", status_code=204)
-async def delete_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
+async def delete_recipe(recipe_id: int, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
     """Delete a recipe."""
     success = await db.delete(recipe_id)
     if not success:
@@ -191,7 +186,7 @@ async def delete_recipe(recipe_id: int, db: SQLiteRecipeDatabase = Depends(get_r
 @private_app.post("/import", response_model=Recipe, status_code=201)
 async def import_recipe(
     import_request: RecipeImportRequest,
-    db: SQLiteRecipeDatabase = Depends(get_recipe_db),
+    db: PostgresRecipeDatabase = Depends(get_recipe_db),
 ):
     """
     Import a recipe from a URL.
@@ -229,7 +224,7 @@ async def import_recipe(
 
 
 @private_app.post("/paste", response_model=Recipe)
-async def paste_recipe(paste_request: RecipePasteRequest, db: SQLiteRecipeDatabase = Depends(get_recipe_db)):
+async def paste_recipe(paste_request: RecipePasteRequest, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
     """
     Paste in an AI-generated recipe in JSON or markdown format.
     

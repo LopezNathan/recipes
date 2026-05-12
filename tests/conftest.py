@@ -1,77 +1,43 @@
 """Shared test fixtures."""
 
 import asyncio
-import pytest
-import tempfile
+import asyncpg
 import os
-import sys
-import io
-from contextlib import redirect_stderr
+import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+
 import main
-from database import Base
-from db import SQLiteRecipeDatabase
+from database import CREATE_TABLE_SQL
+from db import PostgresRecipeDatabase
+
+TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "postgresql://localhost/recipes_test")
 
 
 @pytest.fixture
 def client():
-    """Create test client with a fresh SQLite database for each test."""
-    # Create a temporary database file
-    fd, db_path = tempfile.mkstemp(suffix=".db")
-    os.close(fd)
-    os.unlink(db_path)  # Remove the file so SQLite creates it fresh
-
-    # Create fresh event loop
+    """Create test client with a fresh Postgres table for each test."""
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
-    try:
-        # Setup database
-        async def setup():
-            engine = create_async_engine(
-                f"sqlite+aiosqlite:///{db_path}",
-                connect_args={"check_same_thread": False},
-            )
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            return engine
-        
-        engine = loop.run_until_complete(setup())
-        
-        # Create session factory
-        TestSessionLocal = async_sessionmaker(
-            engine, 
-            class_=AsyncSession, 
-            expire_on_commit=False
-        )
-        
-        # Override dependency
-        async def override_get_recipe_db():
-            async with TestSessionLocal() as session:
-                return SQLiteRecipeDatabase(session)
-        
-        main.app.dependency_overrides[main.get_recipe_db] = override_get_recipe_db
-        
-        # Create and yield client
-        test_client = TestClient(main.app)
-        yield test_client
-        
-    finally:
-        # Cleanup - suppress GC warnings to stderr
-        async def teardown():
-            await engine.dispose()
-        
-        # Redirect stderr to suppress GC warnings during cleanup
-        with redirect_stderr(io.StringIO()):
-            loop.run_until_complete(teardown())
-        
-        main.app.dependency_overrides.clear()
-        # Don't close the loop - let pytest handle cleanup
-        # Closing the loop here causes issues with background tasks
-        
-        # Delete the temp database file
-        try:
-            os.unlink(db_path)
-        except:
-            pass
+
+    async def setup():
+        pool = await asyncpg.create_pool(TEST_DATABASE_URL)
+        async with pool.acquire() as conn:
+            await conn.execute("DROP TABLE IF EXISTS recipes")
+            await conn.execute(CREATE_TABLE_SQL)
+        return pool
+
+    pool = loop.run_until_complete(setup())
+
+    async def override_get_recipe_db():
+        async with pool.acquire() as conn:
+            yield PostgresRecipeDatabase(conn)
+
+    main.app.dependency_overrides[main.get_recipe_db] = override_get_recipe_db
+    test_client = TestClient(main.app)
+    yield test_client
+
+    async def teardown():
+        await pool.close()
+
+    loop.run_until_complete(teardown())
+    main.app.dependency_overrides.clear()

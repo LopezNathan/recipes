@@ -1,62 +1,48 @@
-"""SQLite database setup with SQLAlchemy."""
+"""PostgreSQL database setup with asyncpg."""
 
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import Column, Integer, String, Text, DateTime, JSON
-from datetime import datetime
+import asyncpg
 import os
+from typing import Optional
 
-# Database URL - uses SQLite with aiosqlite for async support
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./recipes.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost/recipes")
 
-# Create async engine
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=False,  # Set to True to see SQL queries
-    future=True,
-    pool_pre_ping=True,
-)
+_pool: Optional[asyncpg.Pool] = None
 
-# Create session factory
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-)
+CREATE_TABLE_SQL = """
+    CREATE TABLE IF NOT EXISTS recipes (
+        id          SERIAL PRIMARY KEY,
+        title       VARCHAR(255) NOT NULL,
+        description TEXT,
+        ingredients JSONB NOT NULL,
+        instructions TEXT NOT NULL,
+        prep_time   INTEGER,
+        cook_time   INTEGER,
+        category    VARCHAR(100),
+        image_url   VARCHAR(500),
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_recipes_title      ON recipes (title);
+    CREATE INDEX IF NOT EXISTS idx_recipes_category   ON recipes (category);
+    CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes (created_at DESC);
+"""
 
-# Base class for models
-Base = declarative_base()
 
-
-class RecipeModel(Base):
-    """SQLAlchemy model for recipes."""
-    
-    __tablename__ = "recipes"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), index=True, nullable=False)
-    description = Column(Text, nullable=True)
-    ingredients = Column(JSON, nullable=False)  # Store as JSON array
-    instructions = Column(Text, nullable=False)
-    prep_time = Column(Integer, nullable=True)  # in minutes
-    cook_time = Column(Integer, nullable=True)  # in minutes
-    category = Column(String(100), index=True, nullable=True)
-    image_url = Column(String(500), nullable=True)  # URL to recipe image
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+async def get_pool() -> asyncpg.Pool:
+    global _pool
+    if _pool is None:
+        _pool = await asyncpg.create_pool(DATABASE_URL)
+    return _pool
 
 
 async def init_db():
-    """Initialize database tables."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(CREATE_TABLE_SQL)
 
 
-async def get_db():
-    """Dependency for getting database session."""
-    async with AsyncSessionLocal() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+async def close_db():
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None
