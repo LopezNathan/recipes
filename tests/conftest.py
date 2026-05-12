@@ -7,8 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 import main
-from database import CREATE_TABLE_SQL
-from db import PostgresRecipeDatabase
+from app.database import CREATE_TABLE_SQL
+from app.db import PostgresRecipeDatabase
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "postgresql://localhost/recipes_test")
 

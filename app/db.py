@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 
-from models import Recipe, RecipeCreate, RecipeUpdate
+from app.models import Recipe, RecipeCreate, RecipeUpdate
 
 
 class RecipeDatabase(ABC):

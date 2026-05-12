@@ -3,7 +3,7 @@
 import json
 import re
 from typing import Optional, Union
-from models import RecipeCreate, Ingredient
+from app.models import RecipeCreate, Ingredient
 
 
 def parse_ingredient(ingredient_str: str) -> dict:

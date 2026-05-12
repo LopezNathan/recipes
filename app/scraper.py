@@ -1,7 +1,7 @@
 """Recipe scraper utility for importing recipes from URLs."""
 
 from recipe_scrapers import scrape_me
-from models import RecipeCreate, Ingredient
+from app.models import RecipeCreate, Ingredient
 from typing import Optional
 import re
 

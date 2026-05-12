@@ -5,11 +5,11 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest, RecipeImportRequest, RecipePasteRequest
-from database import init_db, close_db, get_pool
-from db import PostgresRecipeDatabase
-from scraper import scrape_recipe
-from recipe_parser import parse_recipe_content
+from app.models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest, RecipeImportRequest, RecipePasteRequest
+from app.database import init_db, close_db, get_pool
+from app.db import PostgresRecipeDatabase
+from app.scraper import scrape_recipe
+from app.recipe_parser import parse_recipe_content
 
 
 @asynccontextmanager
