@@ -6,9 +6,12 @@ UVICORN = venv/bin/uvicorn
 -include .env
 export
 
-.PHONY: install up down test test-v dev reset logs
+.PHONY: venv install up down test test-v dev reset logs
 
-install:
+venv:
+	python3 -m venv venv
+
+install: venv
 	$(PIP) install -r requirements.txt
 
 up:
