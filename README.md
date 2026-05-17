@@ -90,9 +90,17 @@ docker-compose.prod.yml     # Production containers
 
 ## Deployment
 
-### Infrastructure (first time)
+### Production architecture
 
-Terraform provisions a GCP e2-micro instance with a static IP and a Cloudflare DNS record.
+- **GCP e2-micro** (us-central1, free tier) running two Docker containers
+  - `public` (port 80) — read-only, served publicly via Cloudflare
+  - `private` (port 8001) — read/write, for personal use
+- **Neon** managed PostgreSQL — DB lives outside GCP so instance deletion is safe
+- **Cloudflare** proxied DNS A record → GCP static IP, SSL flexible mode
+
+### Infrastructure (first time only)
+
+Terraform in `infra/` provisions the GCP static IP, compute instance, and Cloudflare DNS record. cloud-init bootstraps Docker, clones the repo, writes the `.env`, and starts the containers on first boot.
 
 ```bash
 cd infra
@@ -100,28 +108,21 @@ terraform init
 terraform apply
 ```
 
-Required variables in `infra/terraform.tfvars` (not committed):
-- `project_id` — GCP project
-- `ssh_public_key` — SSH key authorized on the instance
-- `repo_url` — Git repo URL
-- `github_token` — PAT for private repo access
-- `database_url` — Neon connection string
+Required variables in `infra/terraform.tfvars` (not committed — contains secrets):
+- `project_id` — GCP project ID
+- `ssh_public_key` — public key content authorized on the instance
+- `repo_url` — Git repo URL (e.g. `https://github.com/you/recipes.git`)
+- `github_token` — fine-grained PAT with Contents:read (for private repos)
+- `database_url` — Neon connection string (`postgresql://...?sslmode=require`)
 - `cloudflare_api_token`, `cloudflare_zone_id`, `subdomain`
 
-### Deploy app changes
+### Deploying app changes
 
 ```bash
-make deploy   # rsync to server + docker compose up --build
+make deploy
 ```
 
-Requires `SERVER_IP` in `.env` and the deploy key at `~/.ssh/id_ed25519`.
-
-### Production architecture
-
-- **GCP e2-micro** (us-central1, free tier)
-- Two Docker containers: `public` (port 80) and `private` (port 8001)
-- **Neon** managed PostgreSQL — persists independently of the GCP instance
-- **Cloudflare** proxied DNS → GCP static IP, SSL flexible mode
+rsync the repo to the server (excluding `.git`, `venv`, secrets), then SSH in and run `docker compose up --build --remove-orphans`. Requires `SERVER_IP` set in `.env`.
 
 ## Database
 
