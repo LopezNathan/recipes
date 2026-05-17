@@ -1,3 +1,8 @@
+resource "google_compute_address" "static" {
+  name   = "recipes-ip"
+  region = var.region
+}
+
 resource "google_compute_instance" "app" {
   name         = "recipes-server"
   machine_type = "e2-micro"
@@ -13,7 +18,9 @@ resource "google_compute_instance" "app" {
   network_interface {
     network    = google_compute_network.main.id
     subnetwork = google_compute_subnetwork.main.id
-    access_config {}
+    access_config {
+      nat_ip = google_compute_address.static.address
+    }
   }
 
   metadata = {
