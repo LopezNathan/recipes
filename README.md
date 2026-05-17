@@ -84,8 +84,8 @@ app/
 index.html           # Single-file frontend SPA
 tests/               # pytest test suite
 infra/               # Terraform (GCP + Cloudflare)
-docker-compose.yml          # Local dev Postgres
-docker-compose.prod.yml     # Production containers
+docker-compose.local.yml    # Local dev Postgres
+docker-compose.yml          # Production containers
 ```
 
 ## Deployment

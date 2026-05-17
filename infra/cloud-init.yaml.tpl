@@ -27,4 +27,4 @@ runcmd:
   - git clone ${repo_url} /opt/recipes
   - chown -R ubuntu:ubuntu /opt/recipes
   - mv /opt/recipes-env /opt/recipes/.env
-  - cd /opt/recipes && docker compose -f docker-compose.prod.yml up -d --build
+  - cd /opt/recipes && docker compose up -d --build

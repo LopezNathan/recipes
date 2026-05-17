@@ -19,11 +19,11 @@ install: venv
 	$(PIP) install -r requirements.txt
 
 up:
-	docker compose up -d
-	docker compose exec db sh -c 'until pg_isready -U postgres; do sleep 1; done'
+	docker compose -f docker-compose.local.yml up -d
+	docker compose -f docker-compose.local.yml exec db sh -c 'until pg_isready -U postgres; do sleep 1; done'
 
 down:
-	docker compose down
+	docker compose -f docker-compose.local.yml down
 
 test: up
 	$(PYTEST) tests/ -q
@@ -35,15 +35,15 @@ dev: up
 	$(UVICORN) main:app --reload
 
 reset:
-	docker compose down -v
-	docker compose up -d
-	docker compose exec db sh -c 'until pg_isready -U postgres; do sleep 1; done'
+	docker compose -f docker-compose.local.yml down -v
+	docker compose -f docker-compose.local.yml up -d
+	docker compose -f docker-compose.local.yml exec db sh -c 'until pg_isready -U postgres; do sleep 1; done'
 
 logs:
-	docker compose logs -f db
+	docker compose -f docker-compose.local.yml logs -f db
 
 deploy:
 	rsync -az -e "ssh -i $(DEPLOY_KEY)" --exclude='.git' --exclude='venv' --exclude='__pycache__' \
 		--exclude='*.pyc' --exclude='.env' --exclude='infra' --exclude='tests' \
 		. $(DEPLOY_HOST):$(DEPLOY_DIR)
-	ssh -i $(DEPLOY_KEY) $(DEPLOY_HOST) 'cd $(DEPLOY_DIR) && sudo docker compose -f docker-compose.prod.yml up -d --build --remove-orphans'
+	ssh -i $(DEPLOY_KEY) $(DEPLOY_HOST) 'cd $(DEPLOY_DIR) && sudo docker compose up -d --build --remove-orphans'

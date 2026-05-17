@@ -1,20 +1,18 @@
 services:
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: recipes
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+  public:
+    build: .
+    restart: unless-stopped
     ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - "80:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    command: uvicorn main:public_app --host 0.0.0.0 --port 8000
 
-volumes:
-  pgdata:
+  private:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    command: uvicorn main:private_app --host 0.0.0.0 --port 8001
