@@ -26,8 +26,8 @@ resource "google_compute_instance" "app" {
   metadata = {
     ssh-keys  = "ubuntu:${var.ssh_public_key}"
     user-data = templatefile("${path.module}/cloud-init.yaml.tpl", {
-      repo_url    = var.github_token != "" ? replace(var.repo_url, "https://", "https://${var.github_token}@") : var.repo_url
-      db_password = var.db_password
+      repo_url     = var.github_token != "" ? replace(var.repo_url, "https://", "https://${var.github_token}@") : var.repo_url
+      database_url = var.database_url
     })
   }
 }

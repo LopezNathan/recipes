@@ -10,7 +10,7 @@ write_files:
   - path: /opt/recipes-env
     permissions: "0600"
     content: |
-      DB_PASSWORD=${db_password}
+      DATABASE_URL=${database_url}
 
 runcmd:
   # Swap file so the Docker build doesn't OOM on 1 GB instances

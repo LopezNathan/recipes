@@ -38,8 +38,8 @@ variable "github_token" {
   default     = ""
 }
 
-variable "db_password" {
-  description = "Password for the PostgreSQL recipes user"
+variable "database_url" {
+  description = "Full Neon (or other) PostgreSQL connection string, e.g. postgresql://user:pass@host/db?sslmode=require"
   type        = string
   sensitive   = true
 }

@@ -2,12 +2,17 @@
 
 import asyncpg
 import os
+import ssl
 from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://localhost/recipes")
+_raw_url = os.getenv("DATABASE_URL", "postgresql://localhost/recipes")
+
+# asyncpg doesn't parse sslmode from the DSN — strip it and pass ssl explicitly
+_use_ssl = "sslmode=" in _raw_url
+DATABASE_URL = _raw_url.split("?")[0] if "?" in _raw_url else _raw_url
 
 _pool: Optional[asyncpg.Pool] = None
 
@@ -34,7 +39,8 @@ CREATE_TABLE_SQL = """
 async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
-        _pool = await asyncpg.create_pool(DATABASE_URL)
+        ssl_ctx = ssl.create_default_context() if _use_ssl else None
+        _pool = await asyncpg.create_pool(DATABASE_URL, ssl=ssl_ctx)
     return _pool
 
 
