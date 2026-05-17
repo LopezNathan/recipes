@@ -7,52 +7,38 @@ import re
 
 
 def parse_ingredient(ingredient_str: str) -> Ingredient:
-    """
-    Parse an ingredient string into name and quantity.
-    
-    Attempts to extract quantity (e.g., "2 cups", "1 tsp", "3 cloves") from the 
-    beginning of the ingredient string. Removes cost information in parentheses.
-    Falls back to using the entire string as name if no quantity pattern is found.
-    
-    Args:
-        ingredient_str: Full ingredient string like "2 cups flour ($1.50)" or "salt"
-        
-    Returns:
-        Ingredient object with parsed name and quantity
-    """
     if not ingredient_str or not ingredient_str.strip():
         return Ingredient(name="")
-    
+
     ingredient_str = ingredient_str.strip()
-    
-    # Remove cost information in parentheses (e.g., "($1.50)")
+
+    # Remove cost info and parenthetical weight notes
     ingredient_str = re.sub(r'\s*\(\$[\d.]+\)', '', ingredient_str)
-    
-    # Remove size/weight info in parentheses (e.g., "(about 1 lb.)", "(4 oz.)")
-    # Only match if parentheses contain measurement units
     ingredient_str = re.sub(r'\s*\([^)]*(?:about|lb|oz|kg|ml|cup|tbsp|tsp)[^)]*\)', '', ingredient_str)
-    
     ingredient_str = ingredient_str.strip()
-    
-    # Pattern to match quantity formats:
-    # 1. Number + unit (e.g., "2 cups", "1/2 tsp")
-    # 2. Number + descriptor (e.g., "1 large", "3 small")
-    # 3. Plain number + word (e.g., "1 lime", "3 cloves")
-    # Match: number/fraction followed by space and either a known unit, descriptor, or just continue
-    quantity_pattern = r'^([\d\s/.\-]+\s*(?:tsp|tbsp|cup|cups|oz|g|mg|ml|l|lb|pinch|dash|splash|drop|clove|cloves|can|jar|loaf|slice|sheet|bunch|stalk|head|bulb|large|medium|small|whole|handful|to\s+taste)(?:\s|$)|[\d]+(?:\s+(?:large|medium|small|whole|handful|tablespoon|teaspoon|clove|cloves))?(?:\s))'
-    
-    match = re.match(quantity_pattern, ingredient_str, re.IGNORECASE)
-    
+
+    match = re.match(
+        r'^([\d\s/.\-–½⅓¼⅔¾⅛⅜⅝⅞]+\s*'
+        r'(?:cups?|tablespoons?|teaspoons?|tbsp|tsp|'
+        r'ounces?|oz|grams?|g|mg|kilograms?|kg|'
+        r'liters?|milliliters?|ml|l|'
+        r'pounds?|lbs?|'
+        r'pinch(?:es)?|dashes?|splashes?|drops?|'
+        r'cloves?|cans?|jars?|loaves?|slices?|sheets?|'
+        r'bunches?|stalks?|heads?|bulbs?|units?|'
+        r'large|medium|small|whole|handfuls?|'
+        r'to\s+taste)?'
+        r')\s+(.+)$',
+        ingredient_str,
+        re.IGNORECASE
+    )
+
     if match:
-        quantity = match.group(0).strip()
-        # Only treat it as quantity if it contains a number
-        if re.search(r'\d', quantity):
-            # Remove the quantity from the ingredient string to get the name
-            name = ingredient_str[len(quantity):].strip()
-            if name:  # Only if there's text left after the quantity
-                return Ingredient(name=name, quantity=quantity)
-    
-    # No quantity found, use entire string as name
+        quantity = match.group(1).strip()
+        name = match.group(2).strip()
+        if quantity and re.search(r'[\d½⅓¼⅔¾⅛⅜⅝⅞]', quantity) and name:
+            return Ingredient(name=name, quantity=quantity)
+
     return Ingredient(name=ingredient_str)
 
 

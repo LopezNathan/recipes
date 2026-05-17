@@ -70,7 +70,17 @@ def parse_ingredient(ingredient_str: str) -> dict:
     # Supports: numbers, fractions (½, ¼, etc.), ranges (2-3, 2–3)
     # Units: cups, tbsp, tsp, oz, g, kg, ml, l, lbs, grams, cc, pints, gallons, teaspoons, tablespoons, pinch, pound, cloves, etc.
     match = re.match(
-        r'^([\d\s\-–\/\.½⅓¼⅔¾⅛⅜⅝⅞]+\s*(?:cups?|tablespoons?|teaspoons?|tbsp|tsp|oz|g|kg|ml|l|lbs?|grams?|cc|pints?|gallons?|pinch(?:es)?|pounds?|pound|cloves?|clove|small|medium|large)?)\s+(.+)$',
+        r'^([\d\s\-–\/\.½⅓¼⅔¾⅛⅜⅝⅞]+\s*'
+        r'(?:cups?|tablespoons?|teaspoons?|tbsp|tsp|'
+        r'ounces?|oz|grams?|g|mg|kilograms?|kg|'
+        r'liters?|milliliters?|ml|l|'
+        r'pounds?|lbs?|'
+        r'pinch(?:es)?|dashes?|splashes?|drops?|'
+        r'cloves?|cans?|jars?|loaves?|slices?|sheets?|'
+        r'bunches?|stalks?|heads?|bulbs?|units?|'
+        r'large|medium|small|whole|handfuls?|'
+        r'to\s+taste)?'
+        r')\s+(.+)$',
         ingredient_str,
         re.IGNORECASE
     )
