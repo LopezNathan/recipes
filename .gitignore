@@ -33,6 +33,7 @@ wheels/
 # Database
 *.db
 *.sqlite3
+recipes.json
 
 # Environment
 .env
