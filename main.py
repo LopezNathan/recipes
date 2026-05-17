@@ -73,9 +73,13 @@ async def get_recipe_db() -> PostgresRecipeDatabase:
 # SHARED READ-ONLY ROUTES (on both public_app and private_app)
 # ============================================================================
 
-def setup_read_only_routes(fastapi_app: FastAPI):
+def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
     """Register read-only routes on the given FastAPI app."""
-    
+
+    @fastapi_app.get("/app-mode")
+    async def app_mode():
+        return {"mode": mode}
+
     @fastapi_app.get("/")
     async def root():
         """Serve the main HTML page."""
@@ -147,8 +151,8 @@ def setup_read_only_routes(fastapi_app: FastAPI):
 
 
 # Register read-only routes on both APIs
-setup_read_only_routes(public_app)
-setup_read_only_routes(private_app)
+setup_read_only_routes(public_app, mode="public")
+setup_read_only_routes(private_app, mode="private")
 
 
 # ============================================================================
