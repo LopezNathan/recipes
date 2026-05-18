@@ -108,15 +108,19 @@ Pushing to `main` triggers a GitHub Actions workflow that:
 ### Production architecture
 
 - **GCP e2-micro** (us-central1, free tier) running two Docker containers
-  - `public` (port 80) — read-only, served publicly via Cloudflare
-  - `private` (port 8001) — read/write, for personal use
+  - `public` (port 80) — read-only, served publicly via Cloudflare proxy
+  - `private` (port 8001) — read/write, accessible only via Cloudflare Tunnel
 - **Docker image** hosted on GHCR (`ghcr.io/lopeznathan/recipes`)
 - **Neon** managed PostgreSQL — DB lives outside GCP so instance deletion is safe
 - **Cloudflare** proxied DNS A record → GCP static IP, SSL flexible mode
+- **Cloudflare Tunnel** — exposes the private API without opening port 8001 to the internet
+- **Cloudflare Access** — one-time PIN authentication (email allowlist) guards the private API
+
+The frontend detects which app it's served from via `GET /app-mode` and shows/hides write UI (Create, Import, Edit, Delete) accordingly.
 
 ### Infrastructure (first time only)
 
-Terraform in `infra/` provisions the GCP static IP, compute instance, and Cloudflare DNS record. cloud-init bootstraps Docker, clones the repo, writes the `.env`, and starts the containers on first boot.
+Terraform in `infra/` provisions the GCP static IP, compute instance, Cloudflare DNS, Tunnel, and Access policy. cloud-init bootstraps Docker, writes the `.env`, installs cloudflared as a systemd service, and starts the containers on first boot.
 
 ```bash
 cd infra
@@ -130,7 +134,12 @@ Required variables in `infra/terraform.tfvars` (not committed — contains secre
 - `repo_url` — Git repo URL (e.g. `https://github.com/you/recipes.git`)
 - `github_token` — fine-grained PAT with Contents:read (for private repos)
 - `database_url` — Neon connection string (`postgresql://...?sslmode=require`)
-- `cloudflare_api_token`, `cloudflare_zone_id`, `subdomain`
+- `cloudflare_api_token` — token with Zone:DNS:Edit and Zero Trust:Edit permissions
+- `cloudflare_account_id`, `cloudflare_zone_id`
+- `subdomain` — public subdomain (default: `recipes`)
+- `private_subdomain` — private tunnel subdomain (default: `recipes-private`)
+- `tunnel_token` — Cloudflare Tunnel token (from Zero Trust dashboard after first apply)
+- `owner_email` — email allowed through Cloudflare Access OTP
 
 ### Manual deploy
 
