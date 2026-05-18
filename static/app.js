@@ -3,12 +3,13 @@ let currentPage = 1;
 let currentSearch = '';
 let currentIngredientFilter = '';
 let editingRecipeId = null;
+let isPrivate = false;
 const LIMIT = 5;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initThemeToggle();
     setupEventListeners();
-    detectAppMode();
+    await detectAppMode();
     loadRecipes();
 });
 
@@ -17,6 +18,7 @@ async function detectAppMode() {
         const res = await fetch(`${API_URL}/app-mode`);
         const { mode } = await res.json();
         if (mode === 'private') {
+            isPrivate = true;
             document.querySelectorAll('.write-only').forEach(el => el.style.display = '');
         }
     } catch (e) {
@@ -328,10 +330,10 @@ function renderRecipes(recipes) {
             <div class="recipe-card-body">
                 <div class="recipe-card-title">${recipe.title}</div>
                 ${metaParts.length ? `<div class="recipe-card-meta">${metaParts.join(' · ')}</div>` : ''}
-                <div class="recipe-card-actions" onclick="event.stopPropagation()">
+                ${isPrivate ? `<div class="recipe-card-actions" onclick="event.stopPropagation()">
                     <button class="btn-secondary" onclick="openEditModal(${recipe.id})">Edit</button>
                     <button class="btn-danger" onclick="deleteRecipe(${recipe.id})">Delete</button>
-                </div>
+                </div>` : ''}
             </div>
         </div>`;
     }).join('');
