@@ -45,9 +45,14 @@ variable "database_url" {
 }
 
 variable "cloudflare_api_token" {
-  description = "Cloudflare API token with Zone:DNS:Edit permission"
+  description = "Cloudflare API token with Zone:DNS:Edit and Zero Trust:Edit permissions"
   type        = string
   sensitive   = true
+}
+
+variable "cloudflare_account_id" {
+  description = "Cloudflare Account ID (found on the right side of your domain's Overview page)"
+  type        = string
 }
 
 variable "cloudflare_zone_id" {
@@ -56,7 +61,20 @@ variable "cloudflare_zone_id" {
 }
 
 variable "subdomain" {
-  description = "Subdomain to create (e.g. 'recipes' creates recipes.yourdomain.com)"
+  description = "Subdomain for the public app (e.g. 'recipes' creates recipes.yourdomain.com)"
   type        = string
   default     = "recipes"
+}
+
+variable "private_subdomain" {
+  description = "Subdomain for the private API via Cloudflare Tunnel (e.g. 'recipes-private')"
+  type        = string
+  default     = "recipes-private"
+}
+
+variable "tunnel_token" {
+  description = "Cloudflare Tunnel token — get from dashboard after first apply: Zero Trust → Networks → Tunnels → [tunnel] → Configure"
+  type        = string
+  sensitive   = true
+  default     = ""
 }

@@ -13,3 +13,8 @@ output "url" {
   value       = "https://${var.subdomain}.${data.cloudflare_zone.domain.name}"
 }
 
+output "private_url" {
+  description = "Private API URL via Cloudflare Tunnel"
+  value       = "https://${var.private_subdomain}.${data.cloudflare_zone.domain.name}"
+}
+
