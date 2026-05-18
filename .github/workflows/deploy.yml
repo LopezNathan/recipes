@@ -23,12 +23,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Read version
+        id: version
+        run: echo "version=$(cat version.txt)" >> $GITHUB_OUTPUT
+
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ghcr.io/lopeznathan/recipes:latest
+          tags: |
+            ghcr.io/lopeznathan/recipes:latest
+            ghcr.io/lopeznathan/recipes:${{ steps.version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

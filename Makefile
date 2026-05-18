@@ -10,7 +10,7 @@ DEPLOY_KEY  ?= ~/.ssh/id_ed25519
 -include .env
 export
 
-.PHONY: venv install up down test test-v dev reset logs deploy
+.PHONY: venv install up down test test-v dev reset logs deploy release
 
 venv:
 	python3 -m venv venv
@@ -47,3 +47,7 @@ deploy:
 		--exclude='*.pyc' --exclude='.env' --exclude='infra' --exclude='tests' \
 		. $(DEPLOY_HOST):$(DEPLOY_DIR)
 	ssh -i $(DEPLOY_KEY) $(DEPLOY_HOST) 'cd $(DEPLOY_DIR) && sudo docker compose pull && sudo docker compose up -d --remove-orphans'
+
+release:
+	git tag v$(shell cat version.txt)
+	git push origin v$(shell cat version.txt)
