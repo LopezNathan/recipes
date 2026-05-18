@@ -75,13 +75,17 @@ Ingredients can be objects or plain strings:
 
 ```
 main.py              # FastAPI app instances and route setup
+version.txt          # Current version number
 app/
   database.py        # asyncpg pool, schema creation
   db.py              # PostgresRecipeDatabase (CRUD)
   models.py          # Pydantic request/response models
   scraper.py         # URL import via recipe-scrapers
   recipe_parser.py   # JSON/markdown paste parser
-index.html           # Single-file frontend SPA
+index.html           # Frontend HTML
+static/
+  style.css          # Styles
+  app.js             # Frontend JavaScript
 tests/               # pytest test suite
 infra/               # Terraform (GCP + Cloudflare)
 docker-compose.local.yml    # Local dev Postgres
@@ -90,11 +94,23 @@ docker-compose.yml          # Production containers
 
 ## Deployment
 
+### CI/CD
+
+Pushing to `main` triggers a GitHub Actions workflow that:
+1. Builds the Docker image and pushes it to GHCR (`ghcr.io/lopeznathan/recipes`) tagged as both `latest` and the version from `version.txt`
+2. SSHes into the server and runs `docker compose pull && docker compose up -d`
+
+### Releasing a new version
+
+1. Update `version.txt` with the new version and push
+2. Run `make release` to create and push the git tag
+
 ### Production architecture
 
 - **GCP e2-micro** (us-central1, free tier) running two Docker containers
   - `public` (port 80) — read-only, served publicly via Cloudflare
   - `private` (port 8001) — read/write, for personal use
+- **Docker image** hosted on GHCR (`ghcr.io/lopeznathan/recipes`)
 - **Neon** managed PostgreSQL — DB lives outside GCP so instance deletion is safe
 - **Cloudflare** proxied DNS A record → GCP static IP, SSL flexible mode
 
@@ -116,13 +132,13 @@ Required variables in `infra/terraform.tfvars` (not committed — contains secre
 - `database_url` — Neon connection string (`postgresql://...?sslmode=require`)
 - `cloudflare_api_token`, `cloudflare_zone_id`, `subdomain`
 
-### Deploying app changes
+### Manual deploy
 
 ```bash
 make deploy
 ```
 
-rsync the repo to the server (excluding `.git`, `venv`, secrets), then SSH in and run `docker compose up --build --remove-orphans`. Requires `SERVER_IP` set in `.env`.
+rsync the repo to the server then SSH in to pull the latest image and restart. Requires `SERVER_IP` set in `.env`.
 
 ## Database
 
