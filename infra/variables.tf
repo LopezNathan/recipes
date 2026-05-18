@@ -31,13 +31,6 @@ variable "repo_url" {
   type        = string
 }
 
-variable "github_token" {
-  description = "GitHub fine-grained PAT with Contents: read for the repo (needed if repo is private)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
 variable "database_url" {
   description = "Full Neon (or other) PostgreSQL connection string, e.g. postgresql://user:pass@host/db?sslmode=require"
   type        = string
