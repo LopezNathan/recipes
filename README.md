@@ -15,7 +15,7 @@ Personal recipe management app. FastAPI backend, PostgreSQL (Neon), deployed on 
 ## Local Development
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.14+
 - Docker and Docker Compose
 
 ### Setup
