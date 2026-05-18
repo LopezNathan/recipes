@@ -78,3 +78,8 @@ variable "tunnel_token" {
   sensitive   = true
   default     = ""
 }
+
+variable "owner_email" {
+  description = "Email address allowed through Cloudflare Access (one-time PIN sent here)"
+  type        = string
+}
