@@ -3,6 +3,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
 from app.models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest, RecipeImportRequest, RecipePasteRequest
@@ -37,6 +38,7 @@ public_app.add_middleware(
     allow_methods=["GET", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
+public_app.mount("/static", StaticFiles(directory="static"), name="static-public")
 
 
 # ============================================================================
@@ -57,6 +59,7 @@ private_app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+private_app.mount("/static", StaticFiles(directory="static"), name="static-private")
 
 # Keep 'app' as alias for backward compatibility with testing
 app = private_app
