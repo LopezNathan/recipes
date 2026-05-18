@@ -46,4 +46,4 @@ deploy:
 	rsync -az -e "ssh -i $(DEPLOY_KEY)" --exclude='.git' --exclude='venv' --exclude='__pycache__' \
 		--exclude='*.pyc' --exclude='.env' --exclude='infra' --exclude='tests' \
 		. $(DEPLOY_HOST):$(DEPLOY_DIR)
-	ssh -i $(DEPLOY_KEY) $(DEPLOY_HOST) 'cd $(DEPLOY_DIR) && sudo docker compose up -d --build --remove-orphans'
+	ssh -i $(DEPLOY_KEY) $(DEPLOY_HOST) 'cd $(DEPLOY_DIR) && sudo docker compose pull && sudo docker compose up -d --remove-orphans'

@@ -1,6 +1,6 @@
 services:
   public:
-    build: .
+    image: ghcr.io/lopeznathan/recipes:latest
     restart: unless-stopped
     ports:
       - "80:8000"
@@ -9,7 +9,7 @@ services:
     command: uvicorn main:public_app --host 0.0.0.0 --port 8000
 
   private:
-    build: .
+    image: ghcr.io/lopeznathan/recipes:latest
     restart: unless-stopped
     ports:
       - "8001:8001"
