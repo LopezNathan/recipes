@@ -86,6 +86,7 @@ async def scrape_recipe(url: str) -> Optional[RecipeCreate]:
             prep_time=prep_time,
             cook_time=cook_time,
             image_url=image_url,
+            source_url=url,
         )
         
         return recipe

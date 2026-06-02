@@ -266,6 +266,7 @@ async function handleUpdateRecipe(e) {
         title: document.getElementById('editTitle').value,
         description: document.getElementById('editDescription').value || undefined,
         image_url: document.getElementById('editImageUrl').value || undefined,
+        source_url: document.getElementById('editSourceUrl').value || undefined,
         ingredients: getIngredientsFromForm('edit'),
         instructions: document.getElementById('editInstructions').value,
         prep_time: parseInt(document.getElementById('editPrepTime').value) || undefined,
@@ -365,6 +366,7 @@ async function openEditModal(recipeId) {
         document.getElementById('editTitle').value = recipe.title;
         document.getElementById('editDescription').value = recipe.description || '';
         document.getElementById('editImageUrl').value = recipe.image_url || '';
+        document.getElementById('editSourceUrl').value = recipe.source_url || '';
         document.getElementById('editInstructions').value = recipe.instructions;
         document.getElementById('editPrepTime').value = recipe.prep_time || '';
         document.getElementById('editCookTime').value = recipe.cook_time || '';
