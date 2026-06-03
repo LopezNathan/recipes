@@ -544,6 +544,11 @@ async function openCookingMode(recipeId) {
             document.getElementById('cookingImage').style.display = 'none';
         }
 
+        // Set description
+        const descEl = document.getElementById('cookingDescription');
+        descEl.textContent = recipe.description || '';
+        descEl.style.display = recipe.description ? '' : 'none';
+
         // Store recipe for servings scaling
         _cookingRecipe = recipe;
         _originalServings = recipe.servings || null;
