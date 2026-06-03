@@ -30,6 +30,14 @@
                     <div class="cooking-meta-item-label">Cook Time</div>
                     <div class="cooking-meta-item-value" id="cookingCookTime">—</div>
                 </div>
+                <div class="cooking-meta-item" id="cookingServingsItem" style="display:none;">
+                    <div class="cooking-meta-item-label">Servings</div>
+                    <div class="cooking-meta-item-value cooking-servings-control">
+                        <button class="servings-btn" onclick="adjustServings(-1)">−</button>
+                        <span id="cookingServings"></span>
+                        <button class="servings-btn" onclick="adjustServings(1)">+</button>
+                    </div>
+                </div>
             </div>
 
             <div class="cooking-section">
@@ -122,6 +130,10 @@
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label for="cookTime">Cook Time (min)</label>
                                 <input type="number" id="cookTime" placeholder="20" min="0">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="servings">Servings</label>
+                                <input type="number" id="servings" placeholder="4" min="1">
                             </div>
                         </div>
 
@@ -217,6 +229,10 @@
                     <div class="form-group" style="margin-bottom: 0;">
                         <label for="editCookTime">Cook Time (min)</label>
                         <input type="number" id="editCookTime" min="0">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="editServings">Servings</label>
+                        <input type="number" id="editServings" min="1">
                     </div>
                 </div>
 

@@ -69,6 +69,17 @@ async def scrape_recipe(url: str) -> Optional[RecipeCreate]:
         # Parse cook/prep times (returns minutes as int or None)
         cook_time = scraper.cook_time()
         prep_time = scraper.prep_time()
+
+        # Servings — yields() returns a string like "4 servings"
+        servings = None
+        try:
+            yields_str = scraper.yields()
+            if yields_str:
+                m = re.search(r'\d+', yields_str)
+                if m:
+                    servings = int(m.group(0))
+        except Exception:
+            pass
         
         # Convert ingredients to Ingredient objects
         ingredients = []
@@ -85,6 +96,7 @@ async def scrape_recipe(url: str) -> Optional[RecipeCreate]:
             instructions=instructions if isinstance(instructions, str) else "\n".join(instructions) if instructions else "",
             prep_time=prep_time,
             cook_time=cook_time,
+            servings=servings,
             image_url=image_url,
             source_url=url,
         )

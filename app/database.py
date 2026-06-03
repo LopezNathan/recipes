@@ -26,12 +26,14 @@ CREATE_TABLE_SQL = """
         prep_time   INTEGER,
         cook_time   INTEGER,
         category    VARCHAR(100),
+        servings    INTEGER,
         image_url   VARCHAR(500),
         source_url  VARCHAR(500),
         created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
     ALTER TABLE recipes ADD COLUMN IF NOT EXISTS source_url VARCHAR(500);
+    ALTER TABLE recipes ADD COLUMN IF NOT EXISTS servings INTEGER;
     CREATE INDEX IF NOT EXISTS idx_recipes_title      ON recipes (title);
     CREATE INDEX IF NOT EXISTS idx_recipes_category   ON recipes (category);
     CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes (created_at DESC);

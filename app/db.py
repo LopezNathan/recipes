@@ -72,6 +72,7 @@ def _to_recipe(row) -> Recipe:
         instructions=row["instructions"],
         prep_time=row["prep_time"],
         cook_time=row["cook_time"],
+        servings=row["servings"],
         category=row["category"],
         image_url=row["image_url"],
         source_url=row["source_url"],
@@ -90,8 +91,8 @@ class PostgresRecipeDatabase(RecipeDatabase):
             """
             INSERT INTO recipes
                 (title, description, ingredients, instructions,
-                 prep_time, cook_time, category, image_url, source_url)
-            VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9)
+                 prep_time, cook_time, servings, category, image_url, source_url)
+            VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10)
             RETURNING *
             """,
             recipe.title,
@@ -100,6 +101,7 @@ class PostgresRecipeDatabase(RecipeDatabase):
             recipe.instructions,
             recipe.prep_time,
             recipe.cook_time,
+            recipe.servings,
             recipe.category,
             recipe.image_url,
             recipe.source_url,

@@ -16,6 +16,7 @@ class RecipeBase(BaseModel):
     instructions: str
     prep_time: Optional[int] = None  # in minutes
     cook_time: Optional[int] = None  # in minutes
+    servings: Optional[int] = None
     category: Optional[str] = None  # e.g., "dessert", "main", "appetizer"
     image_url: Optional[str] = None  # URL to recipe image
     source_url: Optional[str] = None  # URL the recipe was imported from
@@ -32,6 +33,7 @@ class RecipeUpdate(BaseModel):
     instructions: Optional[str] = None
     prep_time: Optional[int] = None
     cook_time: Optional[int] = None
+    servings: Optional[int] = None
     category: Optional[str] = None
     image_url: Optional[str] = None
     source_url: Optional[str] = None

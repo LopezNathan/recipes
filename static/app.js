@@ -123,6 +123,7 @@ async function handleCreateRecipe(e) {
         instructions: document.getElementById('instructions').value,
         prep_time: parseInt(document.getElementById('prepTime').value) || undefined,
         cook_time: parseInt(document.getElementById('cookTime').value) || undefined,
+        servings: parseInt(document.getElementById('servings').value) || undefined,
         image_url: document.getElementById('imageUrl').value || undefined
     };
 
@@ -270,7 +271,8 @@ async function handleUpdateRecipe(e) {
         ingredients: getIngredientsFromForm('edit'),
         instructions: document.getElementById('editInstructions').value,
         prep_time: parseInt(document.getElementById('editPrepTime').value) || undefined,
-        cook_time: parseInt(document.getElementById('editCookTime').value) || undefined
+        cook_time: parseInt(document.getElementById('editCookTime').value) || undefined,
+        servings: parseInt(document.getElementById('editServings').value) || undefined
     };
 
     try {
@@ -370,6 +372,7 @@ async function openEditModal(recipeId) {
         document.getElementById('editInstructions').value = recipe.instructions;
         document.getElementById('editPrepTime').value = recipe.prep_time || '';
         document.getElementById('editCookTime').value = recipe.cook_time || '';
+        document.getElementById('editServings').value = recipe.servings || '';
 
         const container = document.getElementById('editIngredientsContainer');
         container.innerHTML = '';
@@ -451,6 +454,75 @@ function debounce(func, wait) {
 }
 
 // Cooking Mode Functions
+
+let _cookingRecipe = null;
+let _originalServings = null;
+let _currentServings = null;
+
+function _parseLeadingNumber(str) {
+    let m = str.match(/^(\d+)\s+(\d+)\/(\d+)/);
+    if (m) return { value: parseInt(m[1]) + parseInt(m[2]) / parseInt(m[3]), length: m[0].length };
+    m = str.match(/^(\d+)\/(\d+)/);
+    if (m) return { value: parseInt(m[1]) / parseInt(m[2]), length: m[0].length };
+    m = str.match(/^(\d+\.?\d*)/);
+    if (m) return { value: parseFloat(m[1]), length: m[0].length };
+    return null;
+}
+
+function _formatNum(n) {
+    if (n <= 0) return '0';
+    const whole = Math.floor(n);
+    const frac = n - whole;
+    const fracs = [[1,8],[1,4],[1,3],[3,8],[1,2],[5,8],[2,3],[3,4],[7,8]];
+    for (const [a, b] of fracs) {
+        if (Math.abs(frac - a / b) < 0.06) {
+            if (frac < 0.01) return String(whole);
+            return whole > 0 ? `${whole} ${a}/${b}` : `${a}/${b}`;
+        }
+    }
+    if (frac < 0.01) return String(whole);
+    return n.toFixed(1).replace(/\.0$/, '');
+}
+
+function _scaleQuantity(qty, factor) {
+    if (!qty || factor === 1) return qty;
+    // Handle "X to Y unit" range
+    const rangeM = qty.match(/^([\d\s\/]+)\s+to\s+([\d\s\/]+)(.*)/);
+    if (rangeM) {
+        const n1 = _parseLeadingNumber(rangeM[1].trim());
+        const n2 = _parseLeadingNumber(rangeM[2].trim());
+        if (n1 && n2) return `${_formatNum(n1.value * factor)} to ${_formatNum(n2.value * factor)}${rangeM[3]}`;
+    }
+    const parsed = _parseLeadingNumber(qty);
+    if (!parsed) return qty;
+    return _formatNum(parsed.value * factor) + qty.slice(parsed.length);
+}
+
+function _renderIngredients(recipe, factor) {
+    const list = document.getElementById('cookingIngredientsList');
+    list.innerHTML = recipe.ingredients.map((ing, idx) => {
+        const name = typeof ing === 'string' ? ing : ing.name;
+        const rawQty = typeof ing === 'string' ? '' : (ing.quantity || '');
+        const qty = rawQty ? ` • ${_scaleQuantity(rawQty, factor)}` : '';
+        return `
+            <div class="cooking-ingredient-item" data-ingredient-id="${idx}">
+                <input type="checkbox" id="ing-${idx}" class="ingredient-checkbox">
+                <label for="ing-${idx}"><span>${name}${qty}</span></label>
+            </div>`;
+    }).join('');
+    list.querySelectorAll('input').forEach(cb => {
+        cb.addEventListener('change', function() {
+            this.closest('.cooking-ingredient-item').classList.toggle('checked');
+        });
+    });
+}
+
+function adjustServings(delta) {
+    _currentServings = Math.max(1, _currentServings + delta);
+    document.getElementById('cookingServings').textContent = _currentServings;
+    _renderIngredients(_cookingRecipe, _currentServings / _originalServings);
+}
+
 async function openCookingMode(recipeId) {
     try {
         const response = await fetch(`${API_URL}/recipes/${recipeId}`);
@@ -465,31 +537,26 @@ async function openCookingMode(recipeId) {
             document.getElementById('cookingImage').style.display = 'none';
         }
 
+        // Store recipe for servings scaling
+        _cookingRecipe = recipe;
+        _originalServings = recipe.servings || null;
+        _currentServings = _originalServings;
+
         // Set times
         document.getElementById('cookingPrepTime').textContent = recipe.prep_time ? `${recipe.prep_time}m` : '—';
         document.getElementById('cookingCookTime').textContent = recipe.cook_time ? `${recipe.cook_time}m` : '—';
 
-        // Build ingredients list with checkboxes
-        const ingredientsList = document.getElementById('cookingIngredientsList');
-        ingredientsList.innerHTML = recipe.ingredients.map((ing, idx) => {
-            const name = typeof ing === 'string' ? ing : ing.name;
-            const qty = typeof ing === 'string' ? '' : (ing.quantity ? `${ing.quantity} ` : '');
-            return `
-                <div class="cooking-ingredient-item" data-ingredient-id="${idx}">
-                    <input type="checkbox" id="ing-${idx}" class="ingredient-checkbox">
-                    <label for="ing-${idx}">
-                        <span>${qty}${name}</span>
-                    </label>
-                </div>
-            `;
-        }).join('');
+        // Servings control
+        const servingsItem = document.getElementById('cookingServingsItem');
+        if (_originalServings) {
+            document.getElementById('cookingServings').textContent = _originalServings;
+            servingsItem.style.display = '';
+        } else {
+            servingsItem.style.display = 'none';
+        }
 
-        // Add event listeners to ingredients
-        document.querySelectorAll('.cooking-ingredient-item input').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                this.closest('.cooking-ingredient-item').classList.toggle('checked');
-            });
-        });
+        // Build ingredients list with checkboxes
+        _renderIngredients(recipe, 1);
 
         // Build instructions list
         const instructionsList = document.getElementById('cookingInstructionsList');

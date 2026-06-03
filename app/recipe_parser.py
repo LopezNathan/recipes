@@ -137,6 +137,7 @@ def parse_recipe_json(content: str) -> Optional[RecipeCreate]:
             instructions=data.get("instructions", ""),
             prep_time=data.get("prep_time"),
             cook_time=data.get("cook_time"),
+            servings=data.get("servings"),
             category=data.get("category"),
             image_url=data.get("image_url"),
         )
@@ -232,6 +233,7 @@ def parse_recipe_markdown(content: str) -> Optional[RecipeCreate]:
         # Extract metadata
         prep_time = None
         cook_time = None
+        servings = None
         category = None
         image_url = None
         
@@ -270,7 +272,12 @@ def parse_recipe_markdown(content: str) -> Optional[RecipeCreate]:
         )
         if img_match:
             image_url = img_match.group(1)
-        
+
+        # Look for servings
+        serv_match = re.search(r'Servings?:?\s*(\d+)', content, re.IGNORECASE)
+        if serv_match:
+            servings = int(serv_match.group(1))
+
         recipe = RecipeCreate(
             title=title,
             description=description,
@@ -278,6 +285,7 @@ def parse_recipe_markdown(content: str) -> Optional[RecipeCreate]:
             instructions=instructions_text,
             prep_time=prep_time,
             cook_time=cook_time,
+            servings=servings,
             category=category,
             image_url=image_url,
         )
@@ -304,17 +312,44 @@ _UNIT_RE = re.compile(
     r'^(cups?|tablespoons?|teaspoons?|tbsp|tsp|'
     r'ounces?|oz|grams?|g|kilograms?|kg|'
     r'pounds?|lbs?|pinch(?:es)?|dashes?|'
-    r'cloves?|cans?|jars?|slices?|bunches?|stalks?|heads?|bulbs?|'
+    r'cloves?|cans?|jars?|slices?|bunches?|stalks?|heads?|bulbs?|units?|'
     r'large|medium|small|whole|handfuls?)\s+(.+)$',
     re.IGNORECASE,
 )
 
 
-def _parse_html_ingredient(el) -> Ingredient:
-    """Parse an ingredient <p> element using <strong> as the quantity base."""
+def _is_section_header(text: str) -> bool:
+    """Detect Paprika-style ingredient section headers like 'Sauce' or 'Stir Fry'."""
+    # "see note N" pattern is always a header annotation
+    if re.search(r'\bsee note\b', text, re.IGNORECASE):
+        return True
+    # Headers have no commas/parens, and every word starts with a capital
+    if re.search(r'[,\(\)]', text):
+        return False
+    words = text.split()
+    if not words or not all(w[0].isupper() for w in words if w):
+        return False
+    # Single capitalised word with no digits is ambiguous — only treat as header
+    # if it's a known category word
+    _CATEGORY_WORDS = {
+        'sauce', 'marinade', 'dressing', 'topping', 'toppings', 'filling',
+        'glaze', 'garnish', 'base', 'batter', 'coating', 'breading',
+        'salsa', 'relish', 'rub', 'seasoning',
+    }
+    if len(words) == 1:
+        return words[0].lower() in _CATEGORY_WORDS
+    # Multi-word all-title-case with no digits → header
+    return not re.search(r'\d', text)
+
+
+def _parse_html_ingredient(el) -> Optional[Ingredient]:
+    """Parse an ingredient <p> element using <strong> as the quantity base.
+    Returns None for section headers."""
     strong = el.find('strong')
     if not strong:
         text = el.get_text(separator=' ', strip=True)
+        if _is_section_header(text):
+            return None
         parsed = parse_ingredient(text)
         return Ingredient(name=parsed['name'], quantity=parsed['quantity'] or None)
 
@@ -328,10 +363,15 @@ def _parse_html_ingredient(el) -> Ingredient:
             tail_parts.append(part)
     remaining = ' '.join(tail_parts).strip()
 
+    # If remaining starts with a hyphen it's a compound descriptor like "1-inch piece ginger"
+    if remaining.startswith('-') or remaining.startswith('–'):
+        return Ingredient(name=qty_base + remaining)
+
     # Attach a leading unit from the tail to the quantity
     unit_match = _UNIT_RE.match(remaining)
     if unit_match:
-        quantity = f"{qty_base} {unit_match.group(1)}"
+        unit = unit_match.group(1)
+        quantity = qty_base if re.fullmatch(r'units?', unit, re.IGNORECASE) else f"{qty_base} {unit}"
         name = unit_match.group(2).strip()
     else:
         quantity = qty_base
@@ -353,7 +393,7 @@ def parse_recipe_html(content: str) -> Optional[RecipeCreate]:
         ingredients = []
         for el in soup.find_all(attrs={'itemprop': 'recipeIngredient'}):
             ing = _parse_html_ingredient(el)
-            if ing.name:
+            if ing and ing.name:
                 ingredients.append(ing)
         if not ingredients:
             ingredients = [Ingredient(name='See instructions')]
@@ -404,6 +444,19 @@ def parse_recipe_html(content: str) -> Optional[RecipeCreate]:
             if not re.match(r'^https?://', notes_text):
                 description = notes_text
 
+        # Servings from recipeYield — prefer "N serving" pattern, else first integer
+        servings = None
+        yield_el = soup.find(attrs={'itemprop': 'recipeYield'})
+        if yield_el:
+            yield_text = yield_el.get_text(strip=True)
+            m = re.search(r'(\d+)\s*servings?', yield_text, re.IGNORECASE)
+            if m:
+                servings = int(m.group(1))
+            else:
+                m = re.search(r'\b(\d+)\b', yield_text)
+                if m and 1 <= int(m.group(1)) <= 100:
+                    servings = int(m.group(1))
+
         return RecipeCreate(
             title=title,
             description=description,
@@ -411,6 +464,7 @@ def parse_recipe_html(content: str) -> Optional[RecipeCreate]:
             instructions=instructions,
             prep_time=prep_time,
             cook_time=cook_time,
+            servings=servings,
             image_url=image_url,
             source_url=source_url,
         )
