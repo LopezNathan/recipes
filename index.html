@@ -80,12 +80,23 @@
                     </div>
                 </div>
 
-                <div class="pagination" id="pagination" style="display: none;">
-                    <button class="btn-secondary" id="prevBtn">← Previous</button>
-                    <span class="page-info">
-                        Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
-                    </span>
-                    <button class="btn-secondary" id="nextBtn">Next →</button>
+                <div class="pagination-row">
+                    <div class="pagination" id="pagination" style="display: none;">
+                        <button class="btn-secondary" id="prevBtn">← Previous</button>
+                        <span class="page-info">
+                            Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+                        </span>
+                        <button class="btn-secondary" id="nextBtn">Next →</button>
+                    </div>
+                    <div class="per-page-control">
+                        <label for="perPageSelect">Per page</label>
+                        <select id="perPageSelect">
+                            <option value="8" selected>8</option>
+                            <option value="16">16</option>
+                            <option value="32">32</option>
+                            <option value="64">64</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 

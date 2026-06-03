@@ -4,7 +4,7 @@ let currentSearch = '';
 let currentIngredientFilter = '';
 let editingRecipeId = null;
 let isPrivate = false;
-const LIMIT = 5;
+let LIMIT = 8;
 
 document.addEventListener('DOMContentLoaded', async () => {
     initThemeToggle();
@@ -55,6 +55,12 @@ function setupEventListeners() {
 
     document.getElementById('nextBtn').addEventListener('click', () => {
         currentPage++;
+        loadRecipes();
+    });
+
+    document.getElementById('perPageSelect').addEventListener('change', (e) => {
+        LIMIT = parseInt(e.target.value);
+        currentPage = 1;
         loadRecipes();
     });
 

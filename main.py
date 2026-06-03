@@ -11,6 +11,7 @@ from app.database import init_db, close_db, get_pool
 from app.db import PostgresRecipeDatabase
 from app.scraper import scrape_recipe
 from app.recipe_parser import parse_recipe_content
+from app.image_utils import validate_image_url
 
 
 @asynccontextmanager
@@ -219,13 +220,15 @@ async def import_recipe(
     """
     # Scrape recipe from URL
     recipe_data = await scrape_recipe(import_request.url)
-    
+
     if not recipe_data:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Failed to scrape recipe from URL. Please ensure the URL is a valid recipe page."
         )
-    
+
+    recipe_data.image_url = await validate_image_url(recipe_data.image_url)
+
     # Create recipe in database
     return await db.create(recipe_data)
 
@@ -277,12 +280,14 @@ async def paste_recipe(paste_request: RecipePasteRequest, db: PostgresRecipeData
     """
     # Parse the recipe content
     recipe_data = parse_recipe_content(paste_request.content)
-    
+
     if not recipe_data:
         raise HTTPException(
             status_code=400,
             detail="Failed to parse recipe. Please check the format and try again."
         )
-    
+
+    recipe_data.image_url = await validate_image_url(recipe_data.image_url)
+
     # Create recipe in database
     return await db.create(recipe_data)
