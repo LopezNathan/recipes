@@ -176,7 +176,7 @@ body {
 }
 
 .cooking-container {
-    max-width: 800px;
+    max-width: 1100px;
     margin: 0 auto;
     padding: 40px 20px;
     color: var(--text-primary);
@@ -285,6 +285,20 @@ body {
 .servings-btn:hover {
     background: var(--text-primary);
     color: white;
+}
+
+.cooking-body {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 48px;
+    align-items: start;
+}
+
+.cooking-ingredients-section {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
 }
 
 .cooking-section {
@@ -1111,6 +1125,17 @@ button {
     .cooking-container {
         max-width: 100%;
         padding: 20px 16px;
+    }
+
+    .cooking-body {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .cooking-ingredients-section {
+        position: static;
+        max-height: none;
+        overflow-y: visible;
     }
 
     .cooking-header {
