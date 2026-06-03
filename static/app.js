@@ -9,6 +9,7 @@ let LIMIT = 8;
 document.addEventListener('DOMContentLoaded', async () => {
     initThemeToggle();
     setupEventListeners();
+    LIMIT = parseInt(document.getElementById('perPageSelect').value) || 8;
     await detectAppMode();
     loadRecipes();
 });
