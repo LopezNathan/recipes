@@ -287,6 +287,13 @@ body {
     color: white;
 }
 
+.cooking-description {
+    font-size: 1.1em;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0 0 32px;
+}
+
 .cooking-body {
     display: grid;
     grid-template-columns: 320px 1fr;
