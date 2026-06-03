@@ -473,12 +473,12 @@ async function openCookingMode(recipeId) {
         const ingredientsList = document.getElementById('cookingIngredientsList');
         ingredientsList.innerHTML = recipe.ingredients.map((ing, idx) => {
             const name = typeof ing === 'string' ? ing : ing.name;
-            const qty = typeof ing === 'string' ? '' : (ing.quantity ? ` • ${ing.quantity}` : '');
+            const qty = typeof ing === 'string' ? '' : (ing.quantity ? `${ing.quantity} ` : '');
             return `
                 <div class="cooking-ingredient-item" data-ingredient-id="${idx}">
                     <input type="checkbox" id="ing-${idx}" class="ingredient-checkbox">
                     <label for="ing-${idx}">
-                        <span>${name}${qty}</span>
+                        <span>${qty}${name}</span>
                     </label>
                 </div>
             `;

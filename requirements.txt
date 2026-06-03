@@ -6,4 +6,5 @@ pytest-asyncio
 httpx
 asyncpg
 recipe-scrapers
+beautifulsoup4
 python-dotenv

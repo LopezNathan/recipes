@@ -1,8 +1,9 @@
-"""Parser for AI-generated recipes in JSON and markdown-style formats."""
+"""Parser for AI-generated recipes in JSON, markdown, and HTML formats."""
 
 import json
 import re
 from typing import Optional, Union
+from bs4 import BeautifulSoup
 from app.models import RecipeCreate, Ingredient
 
 
@@ -287,29 +288,166 @@ def parse_recipe_markdown(content: str) -> Optional[RecipeCreate]:
         return None
 
 
+def _parse_time_text(text: str) -> Optional[int]:
+    """Parse a time string like '10 mins' or '1 hour 30 mins' into minutes."""
+    total = 0
+    hour_match = re.search(r'(\d+)\s*(?:hour|hr)', text, re.IGNORECASE)
+    min_match = re.search(r'(\d+)\s*(?:min)', text, re.IGNORECASE)
+    if hour_match:
+        total += int(hour_match.group(1)) * 60
+    if min_match:
+        total += int(min_match.group(1))
+    return total if total else None
+
+
+_UNIT_RE = re.compile(
+    r'^(cups?|tablespoons?|teaspoons?|tbsp|tsp|'
+    r'ounces?|oz|grams?|g|kilograms?|kg|'
+    r'pounds?|lbs?|pinch(?:es)?|dashes?|'
+    r'cloves?|cans?|jars?|slices?|bunches?|stalks?|heads?|bulbs?|'
+    r'large|medium|small|whole|handfuls?)\s+(.+)$',
+    re.IGNORECASE,
+)
+
+
+def _parse_html_ingredient(el) -> Ingredient:
+    """Parse an ingredient <p> element using <strong> as the quantity base."""
+    strong = el.find('strong')
+    if not strong:
+        text = el.get_text(separator=' ', strip=True)
+        parsed = parse_ingredient(text)
+        return Ingredient(name=parsed['name'], quantity=parsed['quantity'] or None)
+
+    qty_base = strong.get_text(strip=True)
+
+    # Collect text that follows the <strong> tag
+    tail_parts = []
+    for sibling in strong.next_siblings:
+        part = sibling.get_text(separator=' ', strip=True) if hasattr(sibling, 'get_text') else str(sibling).strip()
+        if part:
+            tail_parts.append(part)
+    remaining = ' '.join(tail_parts).strip()
+
+    # Attach a leading unit from the tail to the quantity
+    unit_match = _UNIT_RE.match(remaining)
+    if unit_match:
+        quantity = f"{qty_base} {unit_match.group(1)}"
+        name = unit_match.group(2).strip()
+    else:
+        quantity = qty_base
+        name = remaining
+
+    return Ingredient(name=name or qty_base, quantity=quantity or None)
+
+
+def parse_recipe_html(content: str) -> Optional[RecipeCreate]:
+    """Parse a recipe HTML page using schema.org microdata."""
+    try:
+        soup = BeautifulSoup(content, 'html.parser')
+
+        # Title
+        title_el = soup.find(attrs={'itemprop': 'name'}) or soup.find(class_='name')
+        title = title_el.get_text(strip=True) if title_el else 'Untitled Recipe'
+
+        # Ingredients
+        ingredients = []
+        for el in soup.find_all(attrs={'itemprop': 'recipeIngredient'}):
+            ing = _parse_html_ingredient(el)
+            if ing.name:
+                ingredients.append(ing)
+        if not ingredients:
+            ingredients = [Ingredient(name='See instructions')]
+
+        # Instructions — join each <p> as its own step
+        instructions = ''
+        inst_el = soup.find(attrs={'itemprop': 'recipeInstructions'})
+        if inst_el:
+            steps = [p.get_text(strip=True) for p in inst_el.find_all('p') if p.get_text(strip=True)]
+            instructions = '\n\n'.join(steps)
+
+        # Times — fall back to totalTime as cook_time when prep/cook aren't separate
+        prep_el = soup.find(attrs={'itemprop': 'prepTime'})
+        prep_time = _parse_time_text(prep_el.get_text()) if prep_el else None
+
+        cook_el = soup.find(attrs={'itemprop': 'cookTime'})
+        cook_time = _parse_time_text(cook_el.get_text()) if cook_el else None
+
+        if not prep_time and not cook_time:
+            total_el = soup.find(attrs={'itemprop': 'totalTime'})
+            cook_time = _parse_time_text(total_el.get_text()) if total_el else None
+
+        # Source URL from itemprop="url", falling back to a bare URL in the notes
+        source_url = None
+        source_el = soup.find(attrs={'itemprop': 'url'})
+        if source_el:
+            source_url = source_el.get('href')
+        if not source_url:
+            notes_el = soup.find(attrs={'itemprop': 'comment'})
+            if notes_el:
+                url_match = re.search(r'https?://\S+', notes_el.get_text())
+                if url_match:
+                    source_url = url_match.group(0).rstrip('*')
+
+        # Image — prefer the external href wrapping the photo, not the local src
+        image_url = None
+        img_el = soup.find('img', attrs={'itemprop': 'image'})
+        if img_el:
+            parent_a = img_el.find_parent('a')
+            if parent_a and str(parent_a.get('href', '')).startswith('http'):
+                image_url = parent_a['href']
+
+        # Description from notes (skip if the notes are just a URL)
+        description = ''
+        notes_el = soup.find(attrs={'itemprop': 'comment'})
+        if notes_el:
+            notes_text = notes_el.get_text(strip=True)
+            if not re.match(r'^https?://', notes_text):
+                description = notes_text
+
+        return RecipeCreate(
+            title=title,
+            description=description,
+            ingredients=ingredients,
+            instructions=instructions,
+            prep_time=prep_time,
+            cook_time=cook_time,
+            image_url=image_url,
+            source_url=source_url,
+        )
+    except Exception as e:
+        print(f"Error parsing HTML recipe: {e}")
+        return None
+
+
 def parse_recipe_content(content: str) -> Optional[RecipeCreate]:
     """
     Detect format and parse recipe content.
-    
-    Tries JSON first, then falls back to markdown format.
+
+    Tries HTML first, then JSON, then markdown.
     """
     content = content.strip()
-    
+
+    # Detect HTML export
+    if content.startswith('<!DOCTYPE') or content.lower().startswith('<html'):
+        result = parse_recipe_html(content)
+        if result:
+            return result
+
     # Try JSON first
     if content.startswith('{'):
         result = parse_recipe_json(content)
         if result:
             return result
-    
+
     # Try markdown format
     if '#' in content or 'ingredients' in content.lower():
         result = parse_recipe_markdown(content)
         if result:
             return result
-    
+
     # If content looks like JSON but failed to parse, return error
     if content.startswith('{'):
         return None
-    
+
     # As last resort, try markdown again
     return parse_recipe_markdown(content)
