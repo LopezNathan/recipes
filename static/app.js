@@ -11,7 +11,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     LIMIT = parseInt(document.getElementById('perPageSelect').value) || 8;
     await detectAppMode();
-    loadRecipes();
+    await loadRecipes();
+    const initialRecipeId = getRecipeIdFromHash();
+    if (initialRecipeId) openCookingMode(initialRecipeId);
 });
 
 async function detectAppMode() {
@@ -331,8 +333,9 @@ function renderRecipes(recipes) {
             : `<div class="recipe-card-img-placeholder">🍽️</div>`;
 
         const metaParts = [];
-        if (recipe.prep_time) metaParts.push(`⏱️ ${recipe.prep_time}m prep`);
-        if (recipe.cook_time) metaParts.push(`🔥 ${recipe.cook_time}m cook`);
+        if (recipe.prep_time) metaParts.push(`⏱️ ${formatDuration(recipe.prep_time)} prep`);
+        if (recipe.cook_time) metaParts.push(`🔥 ${formatDuration(recipe.cook_time)} cook`);
+        if (recipe.servings) metaParts.push(`🍽️ ${recipe.servings} servings`);
 
         return `
         <div class="recipe-card" onclick="openCookingMode(${recipe.id})">
@@ -460,6 +463,31 @@ function debounce(func, wait) {
     };
 }
 
+function formatDuration(minutes) {
+    if (!minutes) return null;
+    if (minutes < 60) return `${minutes}m`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function getRecipeIdFromHash() {
+    const m = location.hash.match(/^#recipe\/(\d+)$/);
+    return m ? parseInt(m[1]) : null;
+}
+
+window.addEventListener('popstate', () => {
+    const recipeId = getRecipeIdFromHash();
+    if (recipeId) {
+        openCookingMode(recipeId);
+    } else {
+        document.getElementById('cookingMode').classList.remove('active');
+        document.body.style.overflow = 'auto';
+        stopAllTimers();
+        timerCounter = 0;
+    }
+});
+
 // Cooking Mode Functions
 
 let _cookingRecipe = null;
@@ -555,8 +583,8 @@ async function openCookingMode(recipeId) {
         _currentServings = _originalServings;
 
         // Set times
-        document.getElementById('cookingPrepTime').textContent = recipe.prep_time ? `${recipe.prep_time}m` : '—';
-        document.getElementById('cookingCookTime').textContent = recipe.cook_time ? `${recipe.cook_time}m` : '—';
+        document.getElementById('cookingPrepTime').textContent = recipe.prep_time ? formatDuration(recipe.prep_time) : '—';
+        document.getElementById('cookingCookTime').textContent = recipe.cook_time ? formatDuration(recipe.cook_time) : '—';
 
         // Servings control
         const servingsItem = document.getElementById('cookingServingsItem');
@@ -629,6 +657,7 @@ async function openCookingMode(recipeId) {
         // Show cooking mode
         document.getElementById('cookingMode').classList.add('active');
         document.body.style.overflow = 'auto';
+        history.pushState({ recipeId: recipe.id }, '', `#recipe/${recipe.id}`);
     } catch (error) {
         showAlert('Error loading recipe: ' + error.message, 'error');
     }
@@ -637,8 +666,9 @@ async function openCookingMode(recipeId) {
 function closeCookingMode() {
     document.getElementById('cookingMode').classList.remove('active');
     document.body.style.overflow = 'auto';
-    stopAllTimers(); // Stop all timers if running
-    timerCounter = 0; // Reset timer counter
+    stopAllTimers();
+    timerCounter = 0;
+    history.replaceState(null, '', location.pathname + location.search);
 }
 
 // Timer Functions
