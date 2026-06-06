@@ -26,7 +26,7 @@ class RecipeDatabase(ABC):
         search: Optional[str] = None,
         ingredient: Optional[str] = None,
         category: Optional[str] = None,
-        sort_by: str = "created_at",
+        sort_by: str = "date_published",
     ) -> Tuple[List[Recipe], int]:
         pass
 
@@ -48,36 +48,26 @@ class RecipeDatabase(ABC):
         pass
 
 
-def _serialize_ingredients(ingredients) -> list:
-    result = []
-    for ing in ingredients:
-        if isinstance(ing, dict):
-            result.append(ing)
-        elif hasattr(ing, "model_dump"):
-            result.append(ing.model_dump())
-        else:
-            result.append({"name": str(ing)})
-    return result
-
-
 def _to_recipe(row) -> Recipe:
-    ingredients = row["ingredients"]
-    if isinstance(ingredients, str):
-        ingredients = json.loads(ingredients)
+    def _load_json(val):
+        return json.loads(val) if isinstance(val, str) else val
+
     return Recipe(
         id=row["id"],
-        title=row["title"],
+        name=row["name"],
         description=row["description"],
-        ingredients=ingredients,
-        instructions=row["instructions"],
-        prep_time=row["prep_time"],
-        cook_time=row["cook_time"],
-        servings=row["servings"],
-        category=row["category"],
-        image_url=row["image_url"],
-        source_url=row["source_url"],
-        created_at=row["created_at"],
-        updated_at=row["updated_at"],
+        recipeIngredient=_load_json(row["recipe_ingredient"]) or [],
+        recipeInstructions=row["recipe_instructions"],
+        prepTime=row["prep_time"],
+        cookTime=row["cook_time"],
+        recipeYield=row["recipe_yield"],
+        recipeCategory=_load_json(row["recipe_category"]) if row["recipe_category"] else None,
+        recipeCuisine=_load_json(row["recipe_cuisine"]) if row["recipe_cuisine"] else None,
+        keywords=_load_json(row["keywords"]) if row["keywords"] else None,
+        image=row["image"],
+        url=row["url"],
+        datePublished=row["date_published"],
+        dateModified=row["date_modified"],
     )
 
 
@@ -90,21 +80,24 @@ class PostgresRecipeDatabase(RecipeDatabase):
         row = await self.conn.fetchrow(
             """
             INSERT INTO recipes
-                (title, description, ingredients, instructions,
-                 prep_time, cook_time, servings, category, image_url, source_url)
-            VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9, $10)
+                (name, description, recipe_ingredient, recipe_instructions,
+                 prep_time, cook_time, recipe_yield, recipe_category,
+                 recipe_cuisine, keywords, image, url)
+            VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12)
             RETURNING *
             """,
-            recipe.title,
+            recipe.name,
             recipe.description,
-            json.dumps(_serialize_ingredients(recipe.ingredients)),
-            recipe.instructions,
-            recipe.prep_time,
-            recipe.cook_time,
-            recipe.servings,
-            recipe.category,
-            recipe.image_url,
-            recipe.source_url,
+            json.dumps(recipe.recipeIngredient),
+            recipe.recipeInstructions,
+            recipe.prepTime,
+            recipe.cookTime,
+            recipe.recipeYield,
+            json.dumps(recipe.recipeCategory) if recipe.recipeCategory is not None else None,
+            json.dumps(recipe.recipeCuisine) if recipe.recipeCuisine is not None else None,
+            json.dumps(recipe.keywords) if recipe.keywords is not None else None,
+            recipe.image,
+            recipe.url,
         )
         return _to_recipe(row)
 
@@ -119,28 +112,30 @@ class PostgresRecipeDatabase(RecipeDatabase):
         search: Optional[str] = None,
         ingredient: Optional[str] = None,
         category: Optional[str] = None,
-        sort_by: str = "created_at",
+        sort_by: str = "date_published",
     ) -> Tuple[List[Recipe], int]:
         conditions: list[str] = []
         params: list = []
 
         if search:
             params.append(f"%{search}%")
-            conditions.append(f"(title ILIKE ${len(params)} OR description ILIKE ${len(params)})")
+            conditions.append(f"(name ILIKE ${len(params)} OR description ILIKE ${len(params)})")
 
         if ingredient:
             params.append(f"%{ingredient}%")
-            conditions.append(f"ingredients::text ILIKE ${len(params)}")
+            conditions.append(f"recipe_ingredient::text ILIKE ${len(params)}")
 
         if category:
             params.append(category)
-            conditions.append(f"category = ${len(params)}")
+            conditions.append(
+                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(recipe_category) AS c WHERE lower(c) = lower(${len(params)}))"
+            )
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
         total = await self.conn.fetchval(f"SELECT COUNT(*) FROM recipes {where}", *params)
 
-        order = "ORDER BY created_at DESC" if sort_by == "created_at" else "ORDER BY title ASC"
+        order = "ORDER BY date_published DESC" if sort_by == "date_published" else "ORDER BY name ASC"
         params.append(limit)
         params.append(skip)
         rows = await self.conn.fetch(
@@ -157,15 +152,18 @@ class PostgresRecipeDatabase(RecipeDatabase):
         max_results: int = 10,
     ) -> List[Recipe]:
         if not search_fields:
-            search_fields = ["title", "description"]
+            search_fields = ["name", "description"]
+
+        # Map schema.org field names to DB column names
+        col_map = {"name": "name", "title": "name", "description": "description", "recipeIngredient": "recipe_ingredient"}
 
         conditions = []
-        if "title" in search_fields:
-            conditions.append("title ILIKE $1")
-        if "description" in search_fields:
-            conditions.append("description ILIKE $1")
-        if "ingredients" in search_fields:
-            conditions.append("ingredients::text ILIKE $1")
+        for field in search_fields:
+            col = col_map.get(field, field)
+            if col in ("name", "description"):
+                conditions.append(f"{col} ILIKE $1")
+            elif col == "recipe_ingredient":
+                conditions.append("recipe_ingredient::text ILIKE $1")
 
         if not conditions:
             return []
@@ -182,19 +180,37 @@ class PostgresRecipeDatabase(RecipeDatabase):
         if not update_data:
             return await self.get(recipe_id)
 
+        # Map model field names to DB column names
+        col_map = {
+            "name": "name",
+            "description": "description",
+            "recipeIngredient": "recipe_ingredient",
+            "recipeInstructions": "recipe_instructions",
+            "prepTime": "prep_time",
+            "cookTime": "cook_time",
+            "recipeYield": "recipe_yield",
+            "recipeCategory": "recipe_category",
+            "recipeCuisine": "recipe_cuisine",
+            "keywords": "keywords",
+            "image": "image",
+            "url": "url",
+        }
+        jsonb_cols = {"recipe_ingredient", "recipe_category", "recipe_cuisine", "keywords"}
+
         set_parts: list[str] = []
         params: list = []
 
-        for key, value in update_data.items():
-            if key == "ingredients":
-                params.append(json.dumps(_serialize_ingredients(value or [])))
-                set_parts.append(f"{key} = ${len(params)}::jsonb")
+        for field, value in update_data.items():
+            col = col_map.get(field, field)
+            if col in jsonb_cols:
+                params.append(json.dumps(value) if value is not None else None)
+                set_parts.append(f"{col} = ${len(params)}::jsonb")
             else:
                 params.append(value)
-                set_parts.append(f"{key} = ${len(params)}")
+                set_parts.append(f"{col} = ${len(params)}")
 
         params.append(datetime.now(timezone.utc))
-        set_parts.append(f"updated_at = ${len(params)}")
+        set_parts.append(f"date_modified = ${len(params)}")
 
         params.append(recipe_id)
         row = await self.conn.fetchrow(

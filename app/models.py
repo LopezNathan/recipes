@@ -1,25 +1,21 @@
 from pydantic import BaseModel
-from typing import Optional, Union
+from typing import Optional
 from datetime import datetime
 
 
-class Ingredient(BaseModel):
-    """Ingredient with name and optional quantity."""
-    name: str
-    quantity: Optional[str] = None  # e.g., "2 cups", "500g", "1 tablespoon"
-
-
 class RecipeBase(BaseModel):
-    title: str
+    name: str
     description: Optional[str] = None
-    ingredients: list[Union[str, Ingredient]]  # Support both strings and Ingredient objects
-    instructions: str
-    prep_time: Optional[int] = None  # in minutes
-    cook_time: Optional[int] = None  # in minutes
-    servings: Optional[int] = None
-    category: Optional[str] = None  # e.g., "dessert", "main", "appetizer"
-    image_url: Optional[str] = None  # URL to recipe image
-    source_url: Optional[str] = None  # URL the recipe was imported from
+    recipeIngredient: list[str]
+    recipeInstructions: str
+    prepTime: Optional[str] = None   # ISO 8601, e.g. "PT30M"
+    cookTime: Optional[str] = None   # ISO 8601, e.g. "PT1H"
+    recipeYield: Optional[str] = None  # e.g. "4 servings"
+    recipeCategory: Optional[list[str]] = None
+    recipeCuisine: Optional[list[str]] = None
+    keywords: Optional[list[str]] = None
+    image: Optional[str] = None
+    url: Optional[str] = None
 
 
 class RecipeCreate(RecipeBase):
@@ -27,38 +23,37 @@ class RecipeCreate(RecipeBase):
 
 
 class RecipeUpdate(BaseModel):
-    title: Optional[str] = None
+    name: Optional[str] = None
     description: Optional[str] = None
-    ingredients: Optional[list[Union[str, Ingredient]]] = None
-    instructions: Optional[str] = None
-    prep_time: Optional[int] = None
-    cook_time: Optional[int] = None
-    servings: Optional[int] = None
-    category: Optional[str] = None
-    image_url: Optional[str] = None
-    source_url: Optional[str] = None
+    recipeIngredient: Optional[list[str]] = None
+    recipeInstructions: Optional[str] = None
+    prepTime: Optional[str] = None
+    cookTime: Optional[str] = None
+    recipeYield: Optional[str] = None
+    recipeCategory: Optional[list[str]] = None
+    recipeCuisine: Optional[list[str]] = None
+    keywords: Optional[list[str]] = None
+    image: Optional[str] = None
+    url: Optional[str] = None
 
 
 class Recipe(RecipeBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
+    datePublished: datetime
+    dateModified: datetime
 
 
 class RecipePasteRequest(BaseModel):
-    """Request to paste in a recipe (JSON or text format)."""
-    content: str  # JSON or formatted text
+    content: str
 
     model_config = {"from_attributes": True}
 
 
 class SearchRequest(BaseModel):
-    """Request model for advanced search."""
     query: str
     search_fields: Optional[list[str]] = None
     max_results: int = 10
 
 
 class RecipeImportRequest(BaseModel):
-    """Request model for importing recipe from URL."""
     url: str

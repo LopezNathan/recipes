@@ -124,8 +124,7 @@
                             <label>Ingredients *</label>
                             <div class="ingredients-container" id="ingredientsContainer">
                                 <div class="ingredient-item">
-                                    <input type="text" placeholder="Ingredient name" class="ingredient-name" required>
-                                    <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+                                    <input type="text" placeholder="e.g., 2 cups flour" class="ingredient-text" required>
                                     <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
                                 </div>
                             </div>
@@ -185,7 +184,7 @@
                     <div>
                         <h3 class="import-section-title">✨ Paste Recipe</h3>
                         <p class="import-section-desc">Paste a JSON, markdown, or HTML recipe</p>
-                        <textarea id="pasteContent" class="paste-content" placeholder='{"title": "Recipe Name", "ingredients": [...], "instructions": "..."}'></textarea>
+                        <textarea id="pasteContent" class="paste-content" placeholder='{"name": "Recipe Name", "recipeIngredient": [...], "recipeInstructions": "..."}'></textarea>
                         <div class="paste-btn-row">
                             <button type="button" id="pasteBtn" class="btn-primary">Paste Recipe</button>
                             <button type="button" id="pasteFormatBtn" class="btn-secondary">Format Help</button>
