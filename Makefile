@@ -10,6 +10,8 @@ DEPLOY_KEY  ?= ~/.ssh/id_ed25519
 -include .env
 export
 
+BUMP ?= patch
+
 .PHONY: venv install up down test test-v dev reset logs deploy release
 
 venv:
@@ -49,5 +51,9 @@ deploy:
 	ssh -i $(DEPLOY_KEY) $(DEPLOY_HOST) 'cd $(DEPLOY_DIR) && sudo docker compose pull && sudo docker compose up -d --remove-orphans'
 
 release:
-	git tag v$(shell cat version.txt)
-	git push origin v$(shell cat version.txt)
+	@python3 -c "v=open('version.txt').read().strip().split('.'); m,n,p=int(v[0]),int(v[1]),int(v[2]); b='$(BUMP)'; r=f'{m+1}.0.0' if b=='major' else f'{m}.{n+1}.0' if b=='minor' else f'{m}.{n}.{p+1}'; open('version.txt','w').write(r)"
+	@echo "Releasing v$$(cat version.txt)"
+	git add version.txt
+	git commit -m "chore: release v$$(cat version.txt)"
+	git tag v$$(cat version.txt)
+	git push origin HEAD v$$(cat version.txt)
