@@ -86,8 +86,7 @@ function addIngredientField() {
     const div = document.createElement('div');
     div.className = 'ingredient-item';
     div.innerHTML = `
-        <input type="text" placeholder="Ingredient name" class="ingredient-name">
-        <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+        <input type="text" placeholder="e.g., 2 cups flour" class="ingredient-text">
         <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
     `;
     container.appendChild(div);
@@ -101,8 +100,7 @@ function addEditIngredientField() {
     const div = document.createElement('div');
     div.className = 'ingredient-item';
     div.innerHTML = `
-        <input type="text" placeholder="Ingredient name" class="ingredient-name">
-        <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+        <input type="text" placeholder="e.g., 2 cups flour" class="ingredient-text">
         <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
     `;
     container.appendChild(div);
@@ -112,28 +110,45 @@ function addEditIngredientField() {
 }
 
 function getIngredientsFromForm(prefix = '') {
-    const container = prefix ? document.getElementById(`${prefix}IngredientsContainer`) : document.getElementById('ingredientsContainer');
-    const items = container.querySelectorAll('.ingredient-item');
-    return Array.from(items).map(item => {
-        const name = item.querySelector('.ingredient-name').value;
-        const quantity = item.querySelector('.ingredient-quantity').value;
-        if (!name) return null;
-        return quantity ? { name, quantity } : name;
-    }).filter(Boolean);
+    const containerId = prefix ? `${prefix}IngredientsContainer` : 'ingredientsContainer';
+    const container = document.getElementById(containerId);
+    return Array.from(container.querySelectorAll('.ingredient-item'))
+        .map(item => (item.querySelector('.ingredient-text').value || '').trim())
+        .filter(Boolean);
+}
+
+function minutesToDuration(minutes) {
+    if (!minutes || isNaN(minutes)) return undefined;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h && m) return `PT${h}H${m}M`;
+    if (h) return `PT${h}H`;
+    return `PT${m}M`;
+}
+
+function durationToMinutes(iso) {
+    if (!iso) return null;
+    const h = iso.match(/(\d+)H/);
+    const m = iso.match(/(\d+)M/);
+    return (h ? parseInt(h[1]) * 60 : 0) + (m ? parseInt(m[1]) : 0) || null;
 }
 
 async function handleCreateRecipe(e) {
     e.preventDefault();
 
+    const prepMins = parseInt(document.getElementById('prepTime').value);
+    const cookMins = parseInt(document.getElementById('cookTime').value);
+    const servings = parseInt(document.getElementById('servings').value);
+
     const recipe = {
-        title: document.getElementById('title').value,
+        name: document.getElementById('title').value,
         description: document.getElementById('description').value || undefined,
-        ingredients: getIngredientsFromForm(),
-        instructions: document.getElementById('instructions').value,
-        prep_time: parseInt(document.getElementById('prepTime').value) || undefined,
-        cook_time: parseInt(document.getElementById('cookTime').value) || undefined,
-        servings: parseInt(document.getElementById('servings').value) || undefined,
-        image_url: document.getElementById('imageUrl').value || undefined
+        recipeIngredient: getIngredientsFromForm(),
+        recipeInstructions: document.getElementById('instructions').value,
+        prepTime: minutesToDuration(prepMins),
+        cookTime: minutesToDuration(cookMins),
+        recipeYield: servings ? `${servings} servings` : undefined,
+        image: document.getElementById('imageUrl').value || undefined
     };
 
     try {
@@ -178,7 +193,7 @@ async function handleImportRecipe() {
 
         if (response.ok) {
             const recipe = await response.json();
-            statusDiv.innerHTML = `✅ Imported: "${recipe.title}"`;
+            statusDiv.innerHTML = `✅ Imported: "${recipe.name}"`;
             statusDiv.style.color = 'var(--success)';
             document.getElementById('importUrl').value = '';
             loadRecipes();
@@ -215,7 +230,7 @@ async function handlePasteRecipe() {
 
         if (response.ok) {
             const recipe = await response.json();
-            statusDiv.innerHTML = `✅ Added: "${recipe.title}"`;
+            statusDiv.innerHTML = `✅ Added: "${recipe.name}"`;
             statusDiv.style.color = 'var(--success)';
             document.getElementById('pasteContent').value = '';
             loadRecipes();
@@ -232,19 +247,20 @@ async function handlePasteRecipe() {
 
 function showFormatHelp() {
     const help = `
-JSON Format Example:
+JSON Format Example (schema.org):
 {
-  "title": "Recipe Name",
+  "name": "Recipe Name",
   "description": "Brief description",
-  "ingredients": [
-    {"name": "flour", "quantity": "2 cups"},
-    {"name": "sugar", "quantity": "1 cup"}
+  "recipeIngredient": [
+    "2 cups flour",
+    "1 cup sugar",
+    "2 eggs"
   ],
-  "instructions": "Step 1.\\nStep 2.\\nStep 3.",
-  "prep_time": 15,
-  "cook_time": 30,
-  "category": "Dessert",
-  "image_url": "https://..."
+  "recipeInstructions": "Step 1.\\nStep 2.\\nStep 3.",
+  "prepTime": "PT15M",
+  "cookTime": "PT30M",
+  "recipeCategory": ["Dessert"],
+  "image": "https://..."
 }
 
 Markdown Format Example:
@@ -272,16 +288,20 @@ Image URL: https://...
 async function handleUpdateRecipe(e) {
     e.preventDefault();
 
+    const prepMins = parseInt(document.getElementById('editPrepTime').value);
+    const cookMins = parseInt(document.getElementById('editCookTime').value);
+    const servings = parseInt(document.getElementById('editServings').value);
+
     const updates = {
-        title: document.getElementById('editTitle').value,
+        name: document.getElementById('editTitle').value,
         description: document.getElementById('editDescription').value || undefined,
-        image_url: document.getElementById('editImageUrl').value || undefined,
-        source_url: document.getElementById('editSourceUrl').value || undefined,
-        ingredients: getIngredientsFromForm('edit'),
-        instructions: document.getElementById('editInstructions').value,
-        prep_time: parseInt(document.getElementById('editPrepTime').value) || undefined,
-        cook_time: parseInt(document.getElementById('editCookTime').value) || undefined,
-        servings: parseInt(document.getElementById('editServings').value) || undefined
+        image: document.getElementById('editImageUrl').value || undefined,
+        url: document.getElementById('editSourceUrl').value || undefined,
+        recipeIngredient: getIngredientsFromForm('edit'),
+        recipeInstructions: document.getElementById('editInstructions').value,
+        prepTime: minutesToDuration(prepMins),
+        cookTime: minutesToDuration(cookMins),
+        recipeYield: servings ? `${servings} servings` : undefined
     };
 
     try {
@@ -328,20 +348,20 @@ function renderRecipes(recipes) {
     }
 
     container.innerHTML = recipes.map(recipe => {
-        const img = recipe.image_url
-            ? `<img class="recipe-card-img" src="${recipe.image_url}" alt="${recipe.title}">`
+        const img = recipe.image
+            ? `<img class="recipe-card-img" src="${recipe.image}" alt="${recipe.name}">`
             : `<div class="recipe-card-img-placeholder">🍽️</div>`;
 
         const metaParts = [];
-        if (recipe.prep_time) metaParts.push(`⏱️ ${formatDuration(recipe.prep_time)} prep`);
-        if (recipe.cook_time) metaParts.push(`🔥 ${formatDuration(recipe.cook_time)} cook`);
-        if (recipe.servings) metaParts.push(`🍽️ ${recipe.servings} servings`);
+        if (recipe.prepTime) metaParts.push(`⏱️ ${formatDuration(recipe.prepTime)} prep`);
+        if (recipe.cookTime) metaParts.push(`🔥 ${formatDuration(recipe.cookTime)} cook`);
+        if (recipe.recipeYield) metaParts.push(`🍽️ ${recipe.recipeYield}`);
 
         return `
         <div class="recipe-card" onclick="openCookingMode(${recipe.id})">
             ${img}
             <div class="recipe-card-body">
-                <div class="recipe-card-title">${recipe.title}</div>
+                <div class="recipe-card-title">${recipe.name}</div>
                 ${metaParts.length ? `<div class="recipe-card-meta">${metaParts.join(' · ')}</div>` : ''}
                 ${isPrivate ? `<div class="recipe-card-actions" onclick="event.stopPropagation()">
                     <button class="btn-secondary" onclick="openEditModal(${recipe.id})">Edit</button>
@@ -375,25 +395,22 @@ async function openEditModal(recipeId) {
 
         editingRecipeId = recipe.id;
 
-        document.getElementById('editTitle').value = recipe.title;
+        document.getElementById('editTitle').value = recipe.name;
         document.getElementById('editDescription').value = recipe.description || '';
-        document.getElementById('editImageUrl').value = recipe.image_url || '';
-        document.getElementById('editSourceUrl').value = recipe.source_url || '';
-        document.getElementById('editInstructions').value = recipe.instructions;
-        document.getElementById('editPrepTime').value = recipe.prep_time || '';
-        document.getElementById('editCookTime').value = recipe.cook_time || '';
-        document.getElementById('editServings').value = recipe.servings || '';
+        document.getElementById('editImageUrl').value = recipe.image || '';
+        document.getElementById('editSourceUrl').value = recipe.url || '';
+        document.getElementById('editInstructions').value = recipe.recipeInstructions;
+        document.getElementById('editPrepTime').value = durationToMinutes(recipe.prepTime) || '';
+        document.getElementById('editCookTime').value = durationToMinutes(recipe.cookTime) || '';
+        document.getElementById('editServings').value = recipe.recipeYield ? parseInt(recipe.recipeYield) : '';
 
         const container = document.getElementById('editIngredientsContainer');
         container.innerHTML = '';
-        recipe.ingredients.forEach(ing => {
+        (recipe.recipeIngredient || []).forEach(ing => {
             const div = document.createElement('div');
             div.className = 'ingredient-item';
-            const name = typeof ing === 'string' ? ing : ing.name;
-            const quantity = typeof ing === 'string' ? '' : (ing.quantity || '');
             div.innerHTML = `
-                <input type="text" placeholder="Ingredient name" class="ingredient-name" value="${name}">
-                <input type="text" placeholder="Quantity" class="ingredient-quantity" value="${quantity}">
+                <input type="text" placeholder="e.g., 2 cups flour" class="ingredient-text" value="${ing}">
                 <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
             `;
             container.appendChild(div);
@@ -437,8 +454,7 @@ function resetForm() {
     const container = document.getElementById('ingredientsContainer');
     container.innerHTML = `
         <div class="ingredient-item">
-            <input type="text" placeholder="Ingredient name" class="ingredient-name" required>
-            <input type="text" placeholder="Quantity (e.g., 400g)" class="ingredient-quantity">
+            <input type="text" placeholder="e.g., 2 cups flour" class="ingredient-text" required>
             <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
         </div>
     `;
@@ -463,12 +479,15 @@ function debounce(func, wait) {
     };
 }
 
-function formatDuration(minutes) {
-    if (!minutes) return null;
-    if (minutes < 60) return `${minutes}m`;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+function formatDuration(iso) {
+    if (!iso) return null;
+    const h = iso.match(/(\d+)H/);
+    const m = iso.match(/(\d+)M/);
+    const hours = h ? parseInt(h[1]) : 0;
+    const mins = m ? parseInt(m[1]) : 0;
+    const total = hours * 60 + mins;
+    if (total < 60) return `${total}m`;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
 function getRecipeIdFromHash() {
@@ -519,30 +538,38 @@ function _formatNum(n) {
     return n.toFixed(1).replace(/\.0$/, '');
 }
 
-function _scaleQuantity(qty, factor) {
-    if (!qty || factor === 1) return qty;
-    // Handle "X to Y unit" range
-    const rangeM = qty.match(/^([\d\s\/]+)\s+to\s+([\d\s\/]+)(.*)/);
+function _scaleIngredient(ingStr, factor) {
+    if (!ingStr || factor === 1) return ingStr;
+    // Handle "X to Y ..." ranges
+    const rangeM = ingStr.match(/^([\d\s\/½⅓¼⅔¾⅛⅜⅝⅞]+)\s+to\s+([\d\s\/½⅓¼⅔¾⅛⅜⅝⅞]+)(.*)/);
     if (rangeM) {
         const n1 = _parseLeadingNumber(rangeM[1].trim());
         const n2 = _parseLeadingNumber(rangeM[2].trim());
         if (n1 && n2) return `${_formatNum(n1.value * factor)} to ${_formatNum(n2.value * factor)}${rangeM[3]}`;
     }
-    const parsed = _parseLeadingNumber(qty);
-    if (!parsed) return qty;
-    return _formatNum(parsed.value * factor) + qty.slice(parsed.length);
+    const parsed = _parseLeadingNumber(ingStr);
+    if (!parsed) return ingStr;
+    return _formatNum(parsed.value * factor) + ingStr.slice(parsed.length);
+}
+
+function _boldQuantity(ingStr) {
+    const m = ingStr.match(
+        /^([\d\s\-–\/½⅓¼⅔¾⅛⅜⅝⅞]+(?:cups?|tablespoons?|teaspoons?|tbsp|tsp|ounces?|oz|grams?|g|mg|kilograms?|kg|liters?|milliliters?|ml|l|pounds?|lbs?|pints?|gallons?|pinch(?:es)?|dashes?|cloves?|cans?|jars?|slices?|bunches?|stalks?|heads?|bulbs?|large|medium|small|whole|handfuls?)?)\s+(.+)/i
+    );
+    if (m && /[\d½⅓¼⅔¾⅛⅜⅝⅞]/.test(m[1])) {
+        return `<strong>${m[1].trim()}</strong> ${m[2]}`;
+    }
+    return ingStr;
 }
 
 function _renderIngredients(recipe, factor) {
     const list = document.getElementById('cookingIngredientsList');
-    list.innerHTML = recipe.ingredients.map((ing, idx) => {
-        const name = typeof ing === 'string' ? ing : ing.name;
-        const rawQty = typeof ing === 'string' ? '' : (ing.quantity || '');
-        const qty = rawQty ? ` • ${_scaleQuantity(rawQty, factor)}` : '';
+    list.innerHTML = (recipe.recipeIngredient || []).map((ing, idx) => {
+        const scaled = _scaleIngredient(ing, factor);
         return `
             <div class="cooking-ingredient-item" data-ingredient-id="${idx}">
                 <input type="checkbox" id="ing-${idx}" class="ingredient-checkbox">
-                <label for="ing-${idx}"><span>${name}${qty}</span></label>
+                <label for="ing-${idx}"><span>${_boldQuantity(scaled)}</span></label>
             </div>`;
     }).join('');
     list.querySelectorAll('input').forEach(cb => {
@@ -563,30 +590,25 @@ async function openCookingMode(recipeId) {
         const response = await fetch(`${API_URL}/recipes/${recipeId}`);
         const recipe = await response.json();
 
-        // Set title and image
-        document.getElementById('cookingTitle').textContent = recipe.title;
-        if (recipe.image_url) {
-            document.getElementById('cookingImage').src = recipe.image_url;
+        document.getElementById('cookingTitle').textContent = recipe.name;
+        if (recipe.image) {
+            document.getElementById('cookingImage').src = recipe.image;
             document.getElementById('cookingImage').style.display = 'block';
         } else {
             document.getElementById('cookingImage').style.display = 'none';
         }
 
-        // Set description
         const descEl = document.getElementById('cookingDescription');
         descEl.textContent = recipe.description || '';
         descEl.style.display = recipe.description ? '' : 'none';
 
-        // Store recipe for servings scaling
         _cookingRecipe = recipe;
-        _originalServings = recipe.servings || null;
+        _originalServings = recipe.recipeYield ? parseInt(recipe.recipeYield) : null;
         _currentServings = _originalServings;
 
-        // Set times
-        document.getElementById('cookingPrepTime').textContent = recipe.prep_time ? formatDuration(recipe.prep_time) : '—';
-        document.getElementById('cookingCookTime').textContent = recipe.cook_time ? formatDuration(recipe.cook_time) : '—';
+        document.getElementById('cookingPrepTime').textContent = recipe.prepTime ? formatDuration(recipe.prepTime) : '—';
+        document.getElementById('cookingCookTime').textContent = recipe.cookTime ? formatDuration(recipe.cookTime) : '—';
 
-        // Servings control
         const servingsItem = document.getElementById('cookingServingsItem');
         if (_originalServings) {
             document.getElementById('cookingServings').textContent = _originalServings;
@@ -595,23 +617,19 @@ async function openCookingMode(recipeId) {
             servingsItem.style.display = 'none';
         }
 
-        // Build ingredients list with checkboxes
         _renderIngredients(recipe, 1);
 
-        // Build instructions list
         const instructionsList = document.getElementById('cookingInstructionsList');
-        instructionsList.innerHTML = recipe.instructions
+        instructionsList.innerHTML = recipe.recipeInstructions
             .split('\n')
             .filter(line => line.trim())
             .map((instruction, idx) => {
-                // Extract time in minutes from instruction (e.g., "5 minutes", "30-45 minutes", "2-3 hours")
                 const timeRegex = /(\d+)(?:\s*[-–]\s*(\d+))?\s*(?:minute|min|hour|hr|second|sec)/i;
                 const timeMatch = instruction.match(timeRegex);
                 let timerMinutes = null;
 
                 if (timeMatch) {
                     let timeValue = parseInt(timeMatch[1]);
-                    // If it's in hours, convert to minutes
                     if (timeMatch[0].toLowerCase().includes('hour') || timeMatch[0].toLowerCase().includes('hr')) {
                         timeValue = timeValue * 60;
                     }
@@ -619,7 +637,6 @@ async function openCookingMode(recipeId) {
                 }
 
                 const hasTimer = timerMinutes !== null;
-
                 const timerHTML = hasTimer ? `<div class="cooking-instruction-timer">
                             <button class="timer-button" data-seconds="${timerMinutes * 60}">⏱️ Start ${Math.floor(timerMinutes / 60) > 0 ? Math.floor(timerMinutes / 60) + 'h ' : ''}${timerMinutes % 60 || timerMinutes}m timer</button>
                         </div>` : '';
@@ -633,28 +650,22 @@ async function openCookingMode(recipeId) {
                 `;
             }).join('');
 
-        // Add event listeners to instructions
         document.querySelectorAll('.cooking-instruction-step').forEach(step => {
             step.addEventListener('click', function(e) {
-                // Don't toggle completed if clicking on timer button
                 if (!e.target.closest('.timer-button')) {
                     this.classList.toggle('completed');
                 }
             });
         });
 
-        // Add event listeners to timer buttons
         document.querySelectorAll('.timer-button').forEach(button => {
             button.addEventListener('click', function(e) {
                 e.stopPropagation();
                 const seconds = parseInt(this.getAttribute('data-seconds'));
-                if (seconds) {
-                    startTimer(seconds);
-                }
+                if (seconds) startTimer(seconds);
             });
         });
 
-        // Show cooking mode
         document.getElementById('cookingMode').classList.add('active');
         document.body.style.overflow = 'auto';
         history.pushState({ recipeId: recipe.id }, '', `#recipe/${recipe.id}`);
@@ -672,18 +683,16 @@ function closeCookingMode() {
 }
 
 // Timer Functions
-let timers = new Map(); // Map of timerId -> {interval, display, seconds}
+let timers = new Map();
 let timerCounter = 0;
 
 function startTimer(seconds) {
     const timerId = timerCounter++;
     let remainingSeconds = seconds;
 
-    // Create timer display element
     const timerDisplay = document.createElement('div');
     timerDisplay.className = 'timer-display';
 
-    // Use bottom positioning on mobile (< 768px), top positioning on desktop
     if (window.innerWidth < 768) {
         timerDisplay.style.bottom = `${20 + (timerId * 100)}px`;
         timerDisplay.style.top = 'auto';
@@ -699,41 +708,26 @@ function startTimer(seconds) {
     `;
     document.body.appendChild(timerDisplay);
 
-    // Start interval
     const timerInterval = setInterval(() => {
         remainingSeconds--;
 
         const timerText = document.getElementById(`timerText-${timerId}`);
-        if (timerText) {
-            timerText.textContent = formatTime(remainingSeconds);
-        }
+        if (timerText) timerText.textContent = formatTime(remainingSeconds);
 
-        // Timer complete
         if (remainingSeconds <= 0) {
             clearInterval(timerInterval);
             timers.delete(timerId);
 
             if (timerDisplay) {
                 timerDisplay.classList.add('completed');
-                // Play sound notification
                 playTimerSound();
-                // Show alert
                 showAlert(`Timer ${timerId + 1} finished! ⏱️`, 'success');
-
-                // Auto-remove after 5 seconds
-                setTimeout(() => {
-                    timerDisplay.remove();
-                }, 5000);
+                setTimeout(() => timerDisplay.remove(), 5000);
             }
         }
     }, 1000);
 
-    // Store timer info
-    timers.set(timerId, {
-        interval: timerInterval,
-        display: timerDisplay,
-        seconds: seconds
-    });
+    timers.set(timerId, { interval: timerInterval, display: timerDisplay, seconds });
 }
 
 function stopTimer(timerId) {
@@ -746,7 +740,7 @@ function stopTimer(timerId) {
 }
 
 function stopAllTimers() {
-    for (const [timerId, timer] of timers) {
+    for (const [, timer] of timers) {
         clearInterval(timer.interval);
         timer.display.remove();
     }
@@ -765,7 +759,6 @@ function formatTime(seconds) {
 }
 
 function playTimerSound() {
-    // Create a simple beep sound using Web Audio API
     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -788,7 +781,6 @@ function initThemeToggle() {
     const toggle = document.getElementById('themeToggle');
     const body = document.body;
 
-    // Get saved theme or default to dark
     const savedTheme = localStorage.getItem('theme') || 'dark';
     body.className = `${savedTheme}-mode`;
     updateThemeToggle(savedTheme);
@@ -810,30 +802,15 @@ function updateThemeToggle(theme) {
 
 // Page Navigation
 function showPage(pageName) {
-    // Hide all pages
-    document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
-    });
+    document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
-    // Remove active from all tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-
-    // Show selected page
     const pageElement = document.getElementById(pageName + 'Page');
-    if (pageElement) {
-        pageElement.classList.add('active');
-    }
+    if (pageElement) pageElement.classList.add('active');
 
-    // Mark selected tab as active
     event.target.classList.add('active');
 
-    // Load recipes when showing home page
-    if (pageName === 'home') {
-        loadRecipes();
-    }
+    if (pageName === 'home') loadRecipes();
 
-    // Scroll to top
     window.scrollTo(0, 0);
 }

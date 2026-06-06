@@ -227,7 +227,7 @@ async def import_recipe(
             detail="Failed to scrape recipe from URL. Please ensure the URL is a valid recipe page."
         )
 
-    recipe_data.image_url = await validate_image_url(recipe_data.image_url)
+    recipe_data.image = await validate_image_url(recipe_data.image)
 
     # Create recipe in database
     return await db.create(recipe_data)
@@ -237,48 +237,44 @@ async def import_recipe(
 async def paste_recipe(paste_request: RecipePasteRequest, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
     """
     Paste in an AI-generated recipe in JSON or markdown format.
-    
+
     Supports two formats:
-    
-    1. JSON format:
+
+    1. JSON format (schema.org Recipe):
     ```json
     {
-        "title": "Recipe Name",
+        "name": "Recipe Name",
         "description": "Optional description",
-        "ingredients": [
-            {"name": "flour", "quantity": "2 cups"},
-            "salt to taste"
-        ],
-        "instructions": "Step 1...\\nStep 2...",
-        "prep_time": 15,
-        "cook_time": 30,
-        "category": "dessert"
+        "recipeIngredient": ["2 cups flour", "1 egg", "salt to taste"],
+        "recipeInstructions": "Step 1...\\nStep 2...",
+        "prepTime": "PT15M",
+        "cookTime": "PT30M",
+        "recipeCategory": ["Dessert"]
     }
     ```
-    
+
     2. Markdown format:
     ```
     # Recipe Title
-    
+
     Optional description here
-    
+
     ## Ingredients
     - 2 cups flour
     - 1 egg
     - salt to taste
-    
+
     ## Instructions
     1. Mix dry ingredients
     2. Add wet ingredients
     3. Bake at 350°F for 30 minutes
-    
+
     ## Metadata
     Prep Time: 15 minutes
     Cook Time: 30 minutes
     Category: Dessert
     ```
     """
-    # Parse the recipe content
     recipe_data = parse_recipe_content(paste_request.content)
 
     if not recipe_data:
@@ -287,7 +283,7 @@ async def paste_recipe(paste_request: RecipePasteRequest, db: PostgresRecipeData
             detail="Failed to parse recipe. Please check the format and try again."
         )
 
-    recipe_data.image_url = await validate_image_url(recipe_data.image_url)
+    recipe_data.image = await validate_image_url(recipe_data.image)
 
     # Create recipe in database
     return await db.create(recipe_data)

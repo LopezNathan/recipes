@@ -19,25 +19,96 @@ _pool: Optional[asyncpg.Pool] = None
 
 CREATE_TABLE_SQL = """
     CREATE TABLE IF NOT EXISTS recipes (
-        id          SERIAL PRIMARY KEY,
-        title       VARCHAR(255) NOT NULL,
-        description TEXT,
-        ingredients JSONB NOT NULL,
-        instructions TEXT NOT NULL,
-        prep_time   INTEGER,
-        cook_time   INTEGER,
-        category    VARCHAR(100),
-        servings    INTEGER,
-        image_url   VARCHAR(500),
-        source_url  VARCHAR(500),
-        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        id                  SERIAL PRIMARY KEY,
+        name                VARCHAR(255) NOT NULL,
+        description         TEXT,
+        recipe_ingredient   JSONB NOT NULL,
+        recipe_instructions TEXT NOT NULL,
+        prep_time           VARCHAR(20),
+        cook_time           VARCHAR(20),
+        recipe_yield        VARCHAR(50),
+        recipe_category     JSONB,
+        recipe_cuisine      JSONB,
+        keywords            JSONB,
+        image               VARCHAR(500),
+        url                 VARCHAR(500),
+        date_published      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        date_modified       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
-    ALTER TABLE recipes ADD COLUMN IF NOT EXISTS source_url VARCHAR(500);
-    ALTER TABLE recipes ADD COLUMN IF NOT EXISTS servings INTEGER;
-    CREATE INDEX IF NOT EXISTS idx_recipes_title      ON recipes (title);
-    CREATE INDEX IF NOT EXISTS idx_recipes_category   ON recipes (category);
-    CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes (created_at DESC);
+
+    DO $$
+    BEGIN
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='title') THEN
+            ALTER TABLE recipes RENAME COLUMN title TO name;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='ingredients') THEN
+            ALTER TABLE recipes RENAME COLUMN ingredients TO recipe_ingredient;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='instructions') THEN
+            ALTER TABLE recipes RENAME COLUMN instructions TO recipe_instructions;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='servings') THEN
+            ALTER TABLE recipes RENAME COLUMN servings TO recipe_yield;
+            ALTER TABLE recipes ALTER COLUMN recipe_yield TYPE VARCHAR(50)
+                USING CASE WHEN recipe_yield IS NOT NULL THEN recipe_yield::text || ' servings' ELSE NULL END;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='category') THEN
+            ALTER TABLE recipes RENAME COLUMN category TO recipe_category;
+            ALTER TABLE recipes ALTER COLUMN recipe_category TYPE JSONB
+                USING CASE WHEN recipe_category IS NOT NULL THEN jsonb_build_array(recipe_category) ELSE NULL END;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='image_url') THEN
+            ALTER TABLE recipes RENAME COLUMN image_url TO image;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='source_url') THEN
+            ALTER TABLE recipes RENAME COLUMN source_url TO url;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='created_at') THEN
+            ALTER TABLE recipes RENAME COLUMN created_at TO date_published;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='updated_at') THEN
+            ALTER TABLE recipes RENAME COLUMN updated_at TO date_modified;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='recipes' AND column_name='prep_time' AND data_type='integer') THEN
+            ALTER TABLE recipes ALTER COLUMN prep_time TYPE VARCHAR(20)
+                USING CASE WHEN prep_time IS NOT NULL THEN 'PT' || prep_time || 'M' ELSE NULL END;
+        END IF;
+        IF EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name='recipes' AND column_name='cook_time' AND data_type='integer') THEN
+            ALTER TABLE recipes ALTER COLUMN cook_time TYPE VARCHAR(20)
+                USING CASE WHEN cook_time IS NOT NULL THEN 'PT' || cook_time || 'M' ELSE NULL END;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='recipe_cuisine') THEN
+            ALTER TABLE recipes ADD COLUMN recipe_cuisine JSONB;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='recipes' AND column_name='keywords') THEN
+            ALTER TABLE recipes ADD COLUMN keywords JSONB;
+        END IF;
+    END $$;
+
+    UPDATE recipes
+    SET recipe_ingredient = (
+        SELECT jsonb_agg(
+            CASE
+                WHEN jsonb_typeof(elem) = 'object' THEN
+                    CASE
+                        WHEN elem->>'quantity' IS NOT NULL AND trim(elem->>'quantity') != ''
+                        THEN to_jsonb(trim(elem->>'quantity') || ' ' || trim(elem->>'name'))
+                        ELSE to_jsonb(trim(elem->>'name'))
+                    END
+                ELSE elem
+            END
+        )
+        FROM jsonb_array_elements(recipe_ingredient) AS elem
+    )
+    WHERE recipe_ingredient IS NOT NULL
+      AND jsonb_array_length(recipe_ingredient) > 0
+      AND jsonb_typeof(recipe_ingredient->0) = 'object';
+
+    CREATE INDEX IF NOT EXISTS idx_recipes_name           ON recipes (name);
+    CREATE INDEX IF NOT EXISTS idx_recipes_recipe_category ON recipes USING gin(recipe_category);
+    CREATE INDEX IF NOT EXISTS idx_recipes_date_published  ON recipes (date_published DESC);
 """
 
 
