@@ -7,6 +7,7 @@ from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
+load_dotenv(".env.local", override=True)  # local overrides for dev
 
 _raw_url = os.getenv("DATABASE_URL", "postgresql://localhost/recipes")
 
