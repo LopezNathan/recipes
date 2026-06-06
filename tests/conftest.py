@@ -7,37 +7,37 @@ import pytest
 from fastapi.testclient import TestClient
 
 import main
+import app.database as db_module
 from app.database import CREATE_TABLE_SQL
-from app.db import PostgresRecipeDatabase
 
 TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "postgresql://localhost/recipes_test")
 
 
+async def _reset_table():
+    conn = await asyncpg.connect(TEST_DATABASE_URL)
+    try:
+        await conn.execute("DROP TABLE IF EXISTS recipes")
+        await conn.execute(CREATE_TABLE_SQL)
+    finally:
+        await conn.close()
+
+
+@pytest.fixture(autouse=True)
+def mock_validate_image_url(monkeypatch):
+    async def passthrough(url, timeout=4.0):
+        return url
+    monkeypatch.setattr("main.validate_image_url", passthrough)
+
+
 @pytest.fixture
 def client():
-    """Create test client with a fresh Postgres table for each test."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    asyncio.run(_reset_table())
 
-    async def setup():
-        pool = await asyncpg.create_pool(TEST_DATABASE_URL)
-        async with pool.acquire() as conn:
-            await conn.execute("DROP TABLE IF EXISTS recipes")
-            await conn.execute(CREATE_TABLE_SQL)
-        return pool
+    db_module.DATABASE_URL = TEST_DATABASE_URL
+    db_module._use_ssl = False
+    db_module._pool = None
 
-    pool = loop.run_until_complete(setup())
+    with TestClient(main.app) as test_client:
+        yield test_client
 
-    async def override_get_recipe_db():
-        async with pool.acquire() as conn:
-            yield PostgresRecipeDatabase(conn)
-
-    main.app.dependency_overrides[main.get_recipe_db] = override_get_recipe_db
-    test_client = TestClient(main.app)
-    yield test_client
-
-    async def teardown():
-        await pool.close()
-
-    loop.run_until_complete(teardown())
-    main.app.dependency_overrides.clear()
+    db_module._pool = None
