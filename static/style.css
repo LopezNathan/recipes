@@ -1317,3 +1317,245 @@ button {
         font-size: 16px;
     }
 }
+
+/* ============================================================
+   Grocery List
+   ============================================================ */
+
+.grocery-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary);
+    color: var(--white);
+    border-radius: 10px;
+    font-size: 0.7em;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    margin-left: 4px;
+    vertical-align: middle;
+    line-height: 1;
+}
+
+.grocery-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.grocery-header h2 {
+    margin: 0;
+}
+
+.grocery-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.grocery-add-custom {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.grocery-custom-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.95em;
+}
+
+.grocery-custom-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.grocery-group {
+    margin-bottom: 24px;
+}
+
+.grocery-group-name {
+    font-size: 0.8em;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.grocery-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    margin-bottom: 6px;
+    transition: opacity 0.2s;
+}
+
+.grocery-item.checked {
+    opacity: 0.45;
+}
+
+.grocery-item.checked .grocery-item-text {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+}
+
+.grocery-checkbox {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--primary);
+}
+
+.grocery-item-text {
+    flex: 1;
+    font-size: 1em;
+}
+
+.grocery-count-stepper {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-shrink: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.grocery-count-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1em;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.grocery-count-btn:hover {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.grocery-count-value {
+    min-width: 24px;
+    text-align: center;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 0 2px;
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+    line-height: 28px;
+}
+
+.grocery-remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.85em;
+    padding: 4px 6px;
+    border-radius: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.15s, background 0.15s;
+}
+
+.grocery-remove-btn:hover {
+    color: var(--danger);
+    background: rgba(220, 38, 38, 0.08);
+}
+
+/* Cooking mode — ingredients header with "Add all" button */
+.cooking-ingredients-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.cooking-ingredients-header h2 {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.btn-grocery-add-all {
+    background: none;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-grocery-add-all:hover {
+    background: var(--primary);
+    color: var(--white);
+}
+
+.btn-grocery-add-all:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* Per-ingredient "+" button */
+.ing-add-to-list-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    font-size: 1.1em;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    padding: 0;
+}
+
+.ing-add-to-list-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(180, 83, 9, 0.06);
+}
+
+.ing-add-to-list-btn:disabled {
+    color: var(--success);
+    border-color: var(--success);
+    cursor: default;
+}

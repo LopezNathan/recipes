@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     LIMIT = parseInt(document.getElementById('perPageSelect').value) || 8;
     await detectAppMode();
     await loadRecipes();
+    updateGroceryBadge();
     const initialRecipeId = getRecipeIdFromHash();
     if (initialRecipeId) openCookingMode(initialRecipeId);
 });
@@ -570,11 +571,21 @@ function _renderIngredients(recipe, factor) {
             <div class="cooking-ingredient-item" data-ingredient-id="${idx}">
                 <input type="checkbox" id="ing-${idx}" class="ingredient-checkbox">
                 <label for="ing-${idx}"><span>${_boldQuantity(scaled)}</span></label>
+                <button class="ing-add-to-list-btn" data-ing="${scaled.replace(/"/g, '&quot;')}" title="Add to grocery list">+</button>
             </div>`;
     }).join('');
     list.querySelectorAll('input').forEach(cb => {
         cb.addEventListener('change', function() {
             this.closest('.cooking-ingredient-item').classList.toggle('checked');
+        });
+    });
+    list.querySelectorAll('.ing-add-to-list-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            addIngredientToGroceryList(this.dataset.ing, _cookingRecipe ? _cookingRecipe.name : '');
+            this.textContent = '✓';
+            this.disabled = true;
+            setTimeout(() => { this.textContent = '+'; this.disabled = false; }, 1200);
         });
     });
 }
@@ -811,6 +822,149 @@ function showPage(pageName) {
     event.target.classList.add('active');
 
     if (pageName === 'home') loadRecipes();
+    if (pageName === 'grocery') {
+        renderGroceryList();
+        const inp = document.getElementById('groceryCustomInput');
+        if (inp && !inp._bound) {
+            inp.addEventListener('keydown', e => { if (e.key === 'Enter') addCustomGroceryItem(); });
+            inp._bound = true;
+        }
+    }
 
     window.scrollTo(0, 0);
+}
+
+// ============================================================================
+// Grocery List
+// ============================================================================
+
+function _loadGroceryList() {
+    try {
+        return JSON.parse(localStorage.getItem('groceryList') || '[]');
+    } catch {
+        return [];
+    }
+}
+
+function _saveGroceryList(list) {
+    localStorage.setItem('groceryList', JSON.stringify(list));
+    updateGroceryBadge();
+}
+
+function updateGroceryBadge() {
+    const list = _loadGroceryList();
+    const unchecked = list.filter(i => !i.checked).length;
+    const badge = document.getElementById('groceryBadge');
+    if (!badge) return;
+    if (unchecked > 0) {
+        badge.textContent = unchecked;
+        badge.style.display = '';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+function addIngredientToGroceryList(text, recipeName) {
+    const list = _loadGroceryList();
+    list.push({ id: Date.now() + Math.random(), text, recipeName, checked: false, count: 1 });
+    _saveGroceryList(list);
+}
+
+function changeGroceryItemCount(id, delta) {
+    const list = _loadGroceryList();
+    const item = list.find(i => i.id === id);
+    if (item) item.count = Math.max(1, (item.count || 1) + delta);
+    _saveGroceryList(list);
+    renderGroceryList();
+}
+
+function addCustomGroceryItem() {
+    const input = document.getElementById('groceryCustomInput');
+    const text = input.value.trim();
+    if (!text) return;
+    addIngredientToGroceryList(text, 'Additional');
+    input.value = '';
+    renderGroceryList();
+}
+
+function addAllToGroceryList() {
+    if (!_cookingRecipe) return;
+    const factor = (_originalServings && _currentServings) ? _currentServings / _originalServings : 1;
+    const recipeName = _cookingRecipe.name;
+    (_cookingRecipe.recipeIngredient || []).forEach(ing => {
+        addIngredientToGroceryList(_scaleIngredient(ing, factor), recipeName);
+    });
+    const btn = document.getElementById('addAllToGroceryBtn');
+    if (btn) {
+        btn.textContent = 'Added!';
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = '+ Add all to list'; btn.disabled = false; }, 1500);
+    }
+}
+
+function toggleGroceryItem(id) {
+    const list = _loadGroceryList();
+    const item = list.find(i => i.id === id);
+    if (item) item.checked = !item.checked;
+    _saveGroceryList(list);
+    renderGroceryList();
+}
+
+function removeGroceryItem(id) {
+    const list = _loadGroceryList().filter(i => i.id !== id);
+    _saveGroceryList(list);
+    renderGroceryList();
+}
+
+function clearCheckedGroceryItems() {
+    const list = _loadGroceryList().filter(i => !i.checked);
+    _saveGroceryList(list);
+    renderGroceryList();
+}
+
+function clearGroceryList() {
+    if (!confirm('Clear all grocery list items?')) return;
+    _saveGroceryList([]);
+    renderGroceryList();
+}
+
+function renderGroceryList() {
+    const container = document.getElementById('groceryListContainer');
+    if (!container) return;
+    const list = _loadGroceryList();
+
+    if (list.length === 0) {
+        container.innerHTML = `<div class="empty-state">
+            <div class="empty-state-icon">🛒</div>
+            <p>No items yet. Open a recipe and add ingredients to your list.</p>
+        </div>`;
+        return;
+    }
+
+    // Group by recipe name
+    const groups = {};
+    list.forEach(item => {
+        const key = item.recipeName || 'Other';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item);
+    });
+
+    container.innerHTML = Object.entries(groups).map(([recipeName, items]) => `
+        <div class="grocery-group">
+            <div class="grocery-group-name">${recipeName}</div>
+            ${items.map(item => `
+                <div class="grocery-item${item.checked ? ' checked' : ''}" data-id="${item.id}">
+                    <input type="checkbox" class="grocery-checkbox" ${item.checked ? 'checked' : ''}
+                        onchange="toggleGroceryItem(${item.id})">
+                    <span class="grocery-item-text">${_scaleIngredient(item.text, item.count || 1)}</span>
+                    <div class="grocery-count-stepper">
+                        <button class="grocery-count-btn" onclick="changeGroceryItemCount(${item.id}, -1)">−</button>
+                        <span class="grocery-count-value">${item.count || 1}</span>
+                        <button class="grocery-count-btn" onclick="changeGroceryItemCount(${item.id}, 1)">+</button>
+                    </div>
+                    <button class="grocery-remove-btn" onclick="removeGroceryItem(${item.id})" title="Remove">✕</button>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
 }

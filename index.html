@@ -44,7 +44,10 @@
 
             <div class="cooking-body">
                 <div class="cooking-section cooking-ingredients-section">
-                    <h2>Ingredients</h2>
+                    <div class="cooking-ingredients-header">
+                        <h2>Ingredients</h2>
+                        <button class="btn-grocery-add-all" id="addAllToGroceryBtn" onclick="addAllToGroceryList()">+ Add all to list</button>
+                    </div>
                     <div class="cooking-ingredients-list" id="cookingIngredientsList"></div>
                 </div>
 
@@ -65,6 +68,9 @@
                 <button class="tab-btn write-only active" onclick="showPage('home')" style="display:none">Home</button>
                 <button class="tab-btn write-only" onclick="showPage('create')" style="display:none">Create</button>
                 <button class="tab-btn write-only" onclick="showPage('import')" style="display:none">Import</button>
+                <button class="tab-btn" id="groceryTabBtn" onclick="showPage('grocery')">
+                    List <span class="grocery-badge" id="groceryBadge" style="display:none"></span>
+                </button>
             </div>
             <button class="theme-toggle" id="themeToggle" title="Toggle dark/light mode">🌙</button>
         </nav>
@@ -190,6 +196,29 @@
                             <button type="button" id="pasteFormatBtn" class="btn-secondary">Format Help</button>
                         </div>
                         <div id="pasteStatus" class="import-status"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grocery List Page -->
+            <div id="groceryPage" class="page">
+                <div class="card">
+                    <div class="grocery-header">
+                        <h2>Grocery List</h2>
+                        <div class="grocery-actions">
+                            <button class="btn-secondary" onclick="clearCheckedGroceryItems()">Clear checked</button>
+                            <button class="btn-danger" onclick="clearGroceryList()">Clear all</button>
+                        </div>
+                    </div>
+                    <div class="grocery-add-custom">
+                        <input type="text" id="groceryCustomInput" placeholder="Add item..." class="grocery-custom-input">
+                        <button class="btn-primary" onclick="addCustomGroceryItem()">Add</button>
+                    </div>
+                    <div id="groceryListContainer">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🛒</div>
+                            <p>No items yet. Open a recipe and add ingredients to your list.</p>
+                        </div>
                     </div>
                 </div>
             </div>
