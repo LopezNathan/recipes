@@ -240,6 +240,9 @@ body {
 .cooking-meta-item {
     display: flex;
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     gap: 8px;
 }
 
@@ -1263,9 +1266,13 @@ button {
     }
 
     .cooking-meta {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 8px;
         padding: 12px;
+    }
+
+    .cooking-meta-item-value {
+        font-size: 1.3em;
     }
 
     .cooking-section h2 {
@@ -1339,28 +1346,24 @@ button {
     line-height: 1;
 }
 
-.grocery-header {
+.grocery-toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 24px;
-    gap: 12px;
+    gap: 8px;
+    margin-bottom: 20px;
     flex-wrap: wrap;
 }
 
-.grocery-header h2 {
+.grocery-toolbar h2 {
     margin: 0;
+    white-space: nowrap;
+    margin-right: 12px;
 }
 
-.grocery-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.grocery-add-custom {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
+.grocery-toolbar .btn-primary,
+.grocery-toolbar .btn-secondary,
+.grocery-toolbar .btn-danger {
+    flex: none;
 }
 
 .grocery-custom-input {
@@ -1503,6 +1506,42 @@ button {
     margin-bottom: 0;
     border-bottom: none;
     padding-bottom: 0;
+}
+
+.ingredients-collapse-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: inherit;
+}
+
+.collapse-chevron {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+    color: var(--text-secondary);
+}
+
+.ingredients-collapse-btn[aria-expanded="false"] .collapse-chevron {
+    transform: rotate(180deg);
+}
+
+.cooking-ingredients-list {
+    overflow: hidden;
+    transition: opacity 0.2s ease;
+}
+
+.cooking-ingredients-list.collapsed {
+    display: none;
 }
 
 .btn-grocery-add-all {
