@@ -699,7 +699,7 @@ let timerCounter = 0;
 
 function startTimer(seconds) {
     const timerId = timerCounter++;
-    let remainingSeconds = seconds;
+    const endTime = Date.now() + seconds * 1000;
 
     const timerDisplay = document.createElement('div');
     timerDisplay.className = 'timer-display';
@@ -715,12 +715,12 @@ function startTimer(seconds) {
     timerDisplay.innerHTML = `
         <button class="timer-display-close" onclick="stopTimer(${timerId})">✕</button>
         <div class="timer-display-label">Timer ${timerId + 1}</div>
-        <div id="timerText-${timerId}" class="timer-display-text">${formatTime(remainingSeconds)}</div>
+        <div id="timerText-${timerId}" class="timer-display-text">${formatTime(seconds)}</div>
     `;
     document.body.appendChild(timerDisplay);
 
     const timerInterval = setInterval(() => {
-        remainingSeconds--;
+        const remainingSeconds = Math.max(0, Math.round((endTime - Date.now()) / 1000));
 
         const timerText = document.getElementById(`timerText-${timerId}`);
         if (timerText) timerText.textContent = formatTime(remainingSeconds);
@@ -738,8 +738,25 @@ function startTimer(seconds) {
         }
     }, 1000);
 
-    timers.set(timerId, { interval: timerInterval, display: timerDisplay, seconds });
+    timers.set(timerId, { interval: timerInterval, display: timerDisplay, endTime });
 }
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    for (const [timerId, timer] of timers) {
+        const remainingSeconds = Math.max(0, Math.round((timer.endTime - Date.now()) / 1000));
+        const timerText = document.getElementById(`timerText-${timerId}`);
+        if (timerText) timerText.textContent = formatTime(remainingSeconds);
+        if (remainingSeconds <= 0) {
+            clearInterval(timer.interval);
+            timers.delete(timerId);
+            timer.display.classList.add('completed');
+            playTimerSound();
+            showAlert(`Timer ${timerId + 1} finished! ⏱️`, 'success');
+            setTimeout(() => timer.display.remove(), 5000);
+        }
+    }
+});
 
 function stopTimer(timerId) {
     const timer = timers.get(timerId);
