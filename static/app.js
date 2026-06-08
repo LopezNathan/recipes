@@ -1,5 +1,29 @@
 const API_URL = '';
 let currentPage = 1;
+let wakeLock = null;
+
+async function acquireWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (_) {}
+}
+
+async function releaseWakeLock() {
+    if (wakeLock) {
+        await wakeLock.release();
+        wakeLock = null;
+    }
+}
+
+// Re-acquire wake lock when the tab becomes visible again (browser auto-releases on hide)
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' &&
+        document.getElementById('cookingMode')?.classList.contains('active')) {
+        acquireWakeLock();
+    }
+});
 let currentSearch = '';
 let currentIngredientFilter = '';
 let editingRecipeId = null;
@@ -680,6 +704,7 @@ async function openCookingMode(recipeId) {
         document.getElementById('cookingMode').classList.add('active');
         document.body.style.overflow = 'auto';
         history.pushState({ recipeId: recipe.id }, '', `#recipe/${recipe.id}`);
+        acquireWakeLock();
     } catch (error) {
         showAlert('Error loading recipe: ' + error.message, 'error');
     }
@@ -691,6 +716,7 @@ function closeCookingMode() {
     stopAllTimers();
     timerCounter = 0;
     history.replaceState(null, '', location.pathname + location.search);
+    releaseWakeLock();
 }
 
 // Timer Functions
