@@ -45,7 +45,10 @@
             <div class="cooking-body">
                 <div class="cooking-section cooking-ingredients-section">
                     <div class="cooking-ingredients-header">
-                        <h2>Ingredients</h2>
+                        <button class="ingredients-collapse-btn" id="ingredientsCollapseBtn" onclick="toggleIngredientsCollapse()" aria-expanded="true" aria-controls="cookingIngredientsList" title="Collapse ingredients">
+                            <h2>Ingredients</h2>
+                            <svg class="collapse-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                        </button>
                         <button class="btn-grocery-add-all" id="addAllToGroceryBtn" onclick="addAllToGroceryList()">+ Add all to list</button>
                     </div>
                     <div class="cooking-ingredients-list" id="cookingIngredientsList"></div>
@@ -203,16 +206,12 @@
             <!-- Grocery List Page -->
             <div id="groceryPage" class="page">
                 <div class="card">
-                    <div class="grocery-header">
+                    <div class="grocery-toolbar">
                         <h2>Grocery List</h2>
-                        <div class="grocery-actions">
-                            <button class="btn-secondary" onclick="clearCheckedGroceryItems()">Clear checked</button>
-                            <button class="btn-danger" onclick="clearGroceryList()">Clear all</button>
-                        </div>
-                    </div>
-                    <div class="grocery-add-custom">
                         <input type="text" id="groceryCustomInput" placeholder="Add item..." class="grocery-custom-input">
                         <button class="btn-primary" onclick="addCustomGroceryItem()">Add</button>
+                        <button class="btn-secondary" onclick="clearCheckedGroceryItems()">Clear checked</button>
+                        <button class="btn-danger" onclick="clearGroceryList()">Clear all</button>
                     </div>
                     <div id="groceryListContainer">
                         <div class="empty-state">

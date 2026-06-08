@@ -904,6 +904,14 @@ function addCustomGroceryItem() {
     renderGroceryList();
 }
 
+function toggleIngredientsCollapse() {
+    const btn = document.getElementById('ingredientsCollapseBtn');
+    const list = document.getElementById('cookingIngredientsList');
+    const expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!expanded));
+    list.classList.toggle('collapsed', expanded);
+}
+
 function addAllToGroceryList() {
     if (!_cookingRecipe) return;
     const factor = (_originalServings && _currentServings) ? _currentServings / _originalServings : 1;
