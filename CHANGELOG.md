@@ -2,18 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [v0.2.2] - 2026-06-15
-
-### Added
-- Grocery list "Order Online" section with FreshDirect and HEB integration
-- Pill-style store selector tabs for clear active-store indication
-- "Shop all" renders inline search links per unchecked item (no popup blocking)
-- Per-item search button (🔍) on each grocery row
-
-## [v0.2.1] - 2026-06-07
+## [v0.3.0] - 2026-06-15
 
 ### Added
 - Grocery list with per-recipe grouping, count stepper, and custom items
+- "Order Online" section with FreshDirect and HEB integration
+- Pill-style store selector tabs for clear active-store indication
+- "Shop all" renders inline search links per unchecked item (no popup blocking)
+- Per-item search button (🔍) on each grocery row
 - Apple Touch Icon and PWA meta tags for iPhone home screen
 - Keep screen awake while in Cooking Mode (Wake Lock API)
 
