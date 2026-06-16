@@ -867,6 +867,7 @@ function showPage(pageName) {
     if (pageName === 'home') loadRecipes();
     if (pageName === 'grocery') {
         renderGroceryList();
+        _syncStoreSelect();
         const inp = document.getElementById('groceryCustomInput');
         if (inp && !inp._bound) {
             inp.addEventListener('keydown', e => { if (e.key === 'Enter') addCustomGroceryItem(); });
@@ -880,6 +881,72 @@ function showPage(pageName) {
 // ============================================================================
 // Grocery List
 // ============================================================================
+
+const GROCERY_STORES = [
+    { id: 'freshdirect', name: 'FreshDirect', searchUrl: q => `https://www.freshdirect.com/search?search=${encodeURIComponent(q).replace(/%20/g, '+')}` },
+    { id: 'heb',         name: 'HEB',         searchUrl: q => `https://www.heb.com/search?esc=true&q=${encodeURIComponent(q)}` },
+];
+
+function _getSelectedStore() {
+    const id = localStorage.getItem('groceryStore') || GROCERY_STORES[0].id;
+    return GROCERY_STORES.find(s => s.id === id) || GROCERY_STORES[0];
+}
+
+function _saveSelectedStore(id) {
+    localStorage.setItem('groceryStore', id);
+}
+
+function _ingredientSearchText(text) {
+    const stripped = text
+        .replace(/^[\d½¼¾⅓⅔⅛⅜⅝⅞\s\/\-\.]+(?:cups?|tbsps?|tablespoons?|tsps?|teaspoons?|oz|ounces?|lbs?|pounds?|grams?|kg|ml|l|pints?|quarts?|gallons?|cloves?|bunche?s?|cans?|packages?|pkg|slices?|pieces?|heads?)?\b\s*/i, '')
+        .replace(/,\s*.*$/, '')
+        .trim();
+    return stripped || text.trim();
+}
+
+function shopItemOnStore(itemId) {
+    const item = _loadGroceryList().find(i => i.id === itemId);
+    if (!item) return;
+    const store = _getSelectedStore();
+    window.open(store.searchUrl(_ingredientSearchText(item.text)), '_blank');
+}
+
+function selectGroceryStore(id) {
+    _saveSelectedStore(id);
+    _syncStoreSelect();
+    const panel = document.getElementById('shopLinksPanel');
+    if (panel && panel.children.length > 0) renderShopLinks();
+}
+
+function _syncStoreSelect() {
+    const id = _getSelectedStore().id;
+    document.querySelectorAll('.grocery-store-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.store === id);
+    });
+}
+
+function shopAllOnStore() {
+    renderShopLinks();
+}
+
+function renderShopLinks() {
+    const panel = document.getElementById('shopLinksPanel');
+    if (!panel) return;
+    const unchecked = _loadGroceryList().filter(i => !i.checked);
+    const store = _getSelectedStore();
+    if (unchecked.length === 0) {
+        panel.innerHTML = '<p class="shop-links-empty">No unchecked items to shop for.</p>';
+        return;
+    }
+    panel.innerHTML = unchecked.map(item => {
+        const url = store.searchUrl(_ingredientSearchText(item.text));
+        const display = _scaleIngredient(item.text, item.count || 1);
+        return `<a class="shop-link-item" href="${url}" target="_blank" rel="noopener noreferrer">
+            <span class="shop-link-name">${display}</span>
+            <span class="shop-link-arrow">${store.name} →</span>
+        </a>`;
+    }).join('');
+}
 
 function _loadGroceryList() {
     try {
@@ -1013,6 +1080,7 @@ function renderGroceryList() {
                         <span class="grocery-count-value">${item.count || 1}</span>
                         <button class="grocery-count-btn" onclick="changeGroceryItemCount(${item.id}, 1)">+</button>
                     </div>
+                    <button class="grocery-shop-btn" onclick="shopItemOnStore(${item.id})" title="Find on store">🔍</button>
                     <button class="grocery-remove-btn" onclick="removeGroceryItem(${item.id})" title="Remove">✕</button>
                 </div>
             `).join('')}

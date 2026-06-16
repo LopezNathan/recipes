@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "recipes-dev",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "source venv/bin/activate && uvicorn main:app --port 8000"],
+      "port": 8000,
+      "autoPort": false
+    }
+  ]
+}
