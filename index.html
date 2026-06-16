@@ -225,6 +225,17 @@
                             <p>No items yet. Open a recipe and add ingredients to your list.</p>
                         </div>
                     </div>
+                    <div class="grocery-order-section">
+                        <div class="grocery-order-header">
+                            <span class="grocery-order-label">Order Online</span>
+                            <div class="grocery-store-tabs" id="groceryStoreTabs">
+                                <button class="grocery-store-tab" data-store="freshdirect" onclick="selectGroceryStore('freshdirect')">FreshDirect</button>
+                                <button class="grocery-store-tab" data-store="heb" onclick="selectGroceryStore('heb')">HEB</button>
+                            </div>
+                            <button class="btn-shop-all" onclick="shopAllOnStore()">Shop all</button>
+                        </div>
+                        <div class="shop-links-panel" id="shopLinksPanel"></div>
+                    </div>
                 </div>
             </div>
         </div>

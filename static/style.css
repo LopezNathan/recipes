@@ -1491,6 +1491,147 @@ button {
     background: rgba(220, 38, 38, 0.08);
 }
 
+.grocery-order-section {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.grocery-order-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.grocery-order-label {
+    font-size: 0.8em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    margin-right: 4px;
+}
+
+.grocery-store-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.grocery-store-tab {
+    padding: 6px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.grocery-store-tab:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.grocery-store-tab.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--white);
+    font-weight: 600;
+}
+
+.btn-shop-all {
+    padding: 7px 16px;
+    background: var(--primary);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+    margin-left: auto;
+}
+
+.btn-shop-all:hover {
+    opacity: 0.85;
+}
+
+.shop-links-panel {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.shop-link-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.shop-link-item:hover {
+    border-color: var(--primary);
+    background: var(--bg-primary);
+}
+
+.shop-link-name {
+    font-size: 0.95em;
+    flex: 1;
+}
+
+.shop-link-arrow {
+    font-size: 0.85em;
+    color: var(--primary);
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.shop-links-empty {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    padding: 4px 0;
+    margin: 0;
+}
+
+.grocery-shop-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    font-size: 0.85em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    padding: 0;
+}
+
+.grocery-shop-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(var(--primary-rgb, 99, 102, 241), 0.08);
+}
+
 /* Cooking mode — ingredients header with "Add all" button */
 .cooking-ingredients-header {
     display: flex;
