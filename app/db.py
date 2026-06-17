@@ -47,6 +47,10 @@ class RecipeDatabase(ABC):
     async def delete(self, recipe_id: int) -> bool:
         pass
 
+    @abstractmethod
+    async def get_categories(self) -> List[str]:
+        pass
+
 
 def _to_recipe(row) -> Recipe:
     def _load_json(val):
@@ -222,3 +226,14 @@ class PostgresRecipeDatabase(RecipeDatabase):
     async def delete(self, recipe_id: int) -> bool:
         result = await self.conn.execute("DELETE FROM recipes WHERE id = $1", recipe_id)
         return result != "DELETE 0"
+
+    async def get_categories(self) -> List[str]:
+        rows = await self.conn.fetch(
+            """
+            SELECT DISTINCT jsonb_array_elements_text(recipe_category) AS category
+            FROM recipes
+            WHERE recipe_category IS NOT NULL
+            ORDER BY category
+            """
+        )
+        return [row["category"] for row in rows]

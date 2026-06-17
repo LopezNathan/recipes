@@ -91,6 +91,7 @@
                     <input type="text" id="searchInput" placeholder="Search recipes...">
                     <input type="text" id="ingredientFilter" placeholder="Filter by ingredient...">
                 </div>
+                <div class="category-chips" id="categoryChips"></div>
 
                 <div id="recipesContainer" class="recipes-list">
                     <div class="empty-state">
@@ -164,6 +165,11 @@
                                 <label for="servings">Servings</label>
                                 <input type="number" id="servings" placeholder="4" min="1">
                             </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="category">Category</label>
+                            <input type="text" id="category" placeholder="e.g., Dinner, Dessert, Breakfast">
                         </div>
 
                         <div class="form-group">
@@ -267,6 +273,11 @@
                 <div class="form-group">
                     <label for="editSourceUrl">Source URL</label>
                     <input type="url" id="editSourceUrl" placeholder="https://...">
+                </div>
+
+                <div class="form-group">
+                    <label for="editCategory">Category</label>
+                    <input type="text" id="editCategory" placeholder="e.g., Dinner, Dessert, Breakfast">
                 </div>
 
                 <div class="form-group">
