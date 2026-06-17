@@ -260,6 +260,16 @@ body {
     color: var(--text-primary);
 }
 
+.cooking-meta.two-items {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.cooking-meta.two-items .cooking-meta-item {
+    flex: 0 1 160px;
+}
+
 .cooking-servings-control {
     display: flex;
     align-items: center;
@@ -304,7 +314,10 @@ body {
 .cooking-ingredients-section {
     position: sticky;
     top: 20px;
-    max-height: calc(100vh - 40px);
+}
+
+.cooking-ingredients-section .cooking-ingredients-list {
+    max-height: calc(100vh - 220px);
     overflow-y: auto;
 }
 
@@ -1173,6 +1186,9 @@ button {
 
     .cooking-ingredients-section {
         position: static;
+    }
+
+    .cooking-ingredients-section .cooking-ingredients-list {
         max-height: none;
         overflow-y: visible;
     }
@@ -1679,6 +1695,7 @@ button {
     margin-bottom: 0;
     border-bottom: none;
     padding-bottom: 0;
+    font-size: 1.3em;
 }
 
 .ingredients-collapse-btn {

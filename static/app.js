@@ -688,11 +688,14 @@ async function openCookingMode(recipeId) {
         document.getElementById('cookingCookTime').textContent = recipe.cookTime ? formatDuration(recipe.cookTime) : '—';
 
         const servingsItem = document.getElementById('cookingServingsItem');
+        const cookingMeta = document.querySelector('.cooking-meta');
         if (_originalServings) {
             document.getElementById('cookingServings').textContent = _originalServings;
             servingsItem.style.display = '';
+            cookingMeta.classList.remove('two-items');
         } else {
             servingsItem.style.display = 'none';
+            cookingMeta.classList.add('two-items');
         }
 
         _renderIngredients(recipe, 1);
