@@ -126,6 +126,11 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
             "limit": limit,
         }
 
+    @fastapi_app.get("/categories", response_model=list[str])
+    async def list_categories(db: PostgresRecipeDatabase = Depends(get_recipe_db)):
+        """Return all distinct recipe categories sorted alphabetically."""
+        return await db.get_categories()
+
     @fastapi_app.get("/recipes/{recipe_id}", response_model=Recipe)
     async def get_recipe(recipe_id: int, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
         """Get a specific recipe by ID."""

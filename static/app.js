@@ -26,6 +26,7 @@ document.addEventListener('visibilitychange', () => {
 });
 let currentSearch = '';
 let currentIngredientFilter = '';
+let currentCategoryFilter = '';
 let editingRecipeId = null;
 let isPrivate = false;
 let LIMIT = 8;
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     LIMIT = parseInt(document.getElementById('perPageSelect').value) || 8;
     await detectAppMode();
-    await loadRecipes();
+    await Promise.all([loadRecipes(), loadCategories()]);
     updateGroceryBadge();
     const initialRecipeId = getRecipeIdFromHash();
     if (initialRecipeId) openCookingMode(initialRecipeId);
@@ -73,6 +74,7 @@ function setupEventListeners() {
         currentIngredientFilter = document.getElementById('ingredientFilter').value;
         loadRecipes();
     }, 300));
+
 
     document.getElementById('prevBtn').addEventListener('click', () => {
         if (currentPage > 1) {
@@ -173,6 +175,9 @@ async function handleCreateRecipe(e) {
         prepTime: minutesToDuration(prepMins),
         cookTime: minutesToDuration(cookMins),
         recipeYield: servings ? `${servings} servings` : undefined,
+        recipeCategory: document.getElementById('category').value
+            ? document.getElementById('category').value.split(',').map(s => s.trim()).filter(Boolean)
+            : undefined,
         image: document.getElementById('imageUrl').value || undefined
     };
 
@@ -188,6 +193,7 @@ async function handleCreateRecipe(e) {
             resetForm();
             currentPage = 1;
             loadRecipes();
+            loadCategories();
         } else {
             showAlert('Error creating recipe', 'error');
         }
@@ -222,6 +228,7 @@ async function handleImportRecipe() {
             statusDiv.style.color = 'var(--success)';
             document.getElementById('importUrl').value = '';
             loadRecipes();
+            loadCategories();
         } else {
             const error = await response.json();
             statusDiv.innerHTML = `❌ ${error.detail || 'Failed to import recipe'}`;
@@ -259,6 +266,7 @@ async function handlePasteRecipe() {
             statusDiv.style.color = 'var(--success)';
             document.getElementById('pasteContent').value = '';
             loadRecipes();
+            loadCategories();
         } else {
             const error = await response.json();
             statusDiv.innerHTML = `❌ ${error.detail || 'Failed to parse recipe'}`;
@@ -326,7 +334,10 @@ async function handleUpdateRecipe(e) {
         recipeInstructions: document.getElementById('editInstructions').value,
         prepTime: minutesToDuration(prepMins),
         cookTime: minutesToDuration(cookMins),
-        recipeYield: servings ? `${servings} servings` : undefined
+        recipeYield: servings ? `${servings} servings` : undefined,
+        recipeCategory: document.getElementById('editCategory').value
+            ? document.getElementById('editCategory').value.split(',').map(s => s.trim()).filter(Boolean)
+            : undefined
     };
 
     try {
@@ -348,11 +359,41 @@ async function handleUpdateRecipe(e) {
     }
 }
 
+async function loadCategories() {
+    try {
+        const response = await fetch(`${API_URL}/categories`);
+        const categories = await response.json();
+        renderCategoryChips(categories);
+    } catch (_) {}
+}
+
+function renderCategoryChips(categories) {
+    const container = document.getElementById('categoryChips');
+    if (!categories.length) {
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = categories.map(cat => {
+        const active = cat === currentCategoryFilter ? ' active' : '';
+        return `<button class="category-chip${active}" onclick="selectCategory('${cat.replace(/'/g, "\\'")}')">${cat}</button>`;
+    }).join('');
+}
+
+function selectCategory(cat) {
+    currentCategoryFilter = currentCategoryFilter === cat ? '' : cat;
+    currentPage = 1;
+    document.querySelectorAll('.category-chip').forEach(el => {
+        el.classList.toggle('active', el.textContent === currentCategoryFilter);
+    });
+    loadRecipes();
+}
+
 async function loadRecipes() {
     try {
         let url = `${API_URL}/recipes?skip=${(currentPage - 1) * LIMIT}&limit=${LIMIT}`;
         if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
         if (currentIngredientFilter) url += `&ingredient=${encodeURIComponent(currentIngredientFilter)}`;
+        if (currentCategoryFilter) url += `&category=${encodeURIComponent(currentCategoryFilter)}`;
 
         const response = await fetch(url);
         const data = await response.json();
@@ -428,6 +469,7 @@ async function openEditModal(recipeId) {
         document.getElementById('editPrepTime').value = durationToMinutes(recipe.prepTime) || '';
         document.getElementById('editCookTime').value = durationToMinutes(recipe.cookTime) || '';
         document.getElementById('editServings').value = recipe.recipeYield ? parseInt(recipe.recipeYield) : '';
+        document.getElementById('editCategory').value = recipe.recipeCategory ? recipe.recipeCategory.join(', ') : '';
 
         const container = document.getElementById('editIngredientsContainer');
         container.innerHTML = '';
@@ -466,6 +508,7 @@ async function deleteRecipe(recipeId) {
         if (response.ok) {
             showAlert('Recipe deleted successfully!', 'success');
             loadRecipes();
+            loadCategories();
         } else {
             showAlert('Error deleting recipe', 'error');
         }
