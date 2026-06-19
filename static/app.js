@@ -27,6 +27,8 @@ document.addEventListener('visibilitychange', () => {
 let currentSearch = '';
 let currentIngredientFilter = '';
 let currentCategoryFilter = '';
+let currentCuisineFilter = '';
+let currentKeywordFilter = '';
 let editingRecipeId = null;
 let isPrivate = false;
 let LIMIT = 8;
@@ -36,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupEventListeners();
     LIMIT = parseInt(document.getElementById('perPageSelect').value) || 8;
     await detectAppMode();
-    await Promise.all([loadRecipes(), loadCategories()]);
+    await Promise.all([loadRecipes(), loadCategories(), loadCuisines(), loadKeywords()]);
     updateGroceryBadge();
     const initialRecipeId = getRecipeIdFromHash();
     if (initialRecipeId) openCookingMode(initialRecipeId);
@@ -74,7 +76,6 @@ function setupEventListeners() {
         currentIngredientFilter = document.getElementById('ingredientFilter').value;
         loadRecipes();
     }, 300));
-
 
     document.getElementById('prevBtn').addEventListener('click', () => {
         if (currentPage > 1) {
@@ -325,6 +326,11 @@ async function handleUpdateRecipe(e) {
     const cookMins = parseInt(document.getElementById('editCookTime').value);
     const servings = parseInt(document.getElementById('editServings').value);
 
+    const parseTagInput = id => {
+        const val = document.getElementById(id).value.trim();
+        return val ? val.split(',').map(t => t.trim()).filter(Boolean) : undefined;
+    };
+
     const updates = {
         name: document.getElementById('editTitle').value,
         description: document.getElementById('editDescription').value || undefined,
@@ -335,9 +341,9 @@ async function handleUpdateRecipe(e) {
         prepTime: minutesToDuration(prepMins),
         cookTime: minutesToDuration(cookMins),
         recipeYield: servings ? `${servings} servings` : undefined,
-        recipeCategory: document.getElementById('editCategory').value
-            ? document.getElementById('editCategory').value.split(',').map(s => s.trim()).filter(Boolean)
-            : undefined
+        recipeCategory: parseTagInput('editCategory'),
+        recipeCuisine: parseTagInput('editCuisine'),
+        keywords: parseTagInput('editKeywords'),
     };
 
     try {
@@ -367,16 +373,27 @@ async function loadCategories() {
     } catch (_) {}
 }
 
+function _updateFilterSection() {
+    const anyVisible = ['categoryRow', 'cuisineRow', 'keywordRow']
+        .some(id => document.getElementById(id).style.display !== 'none');
+    document.getElementById('filterSection').style.display = anyVisible ? '' : 'none';
+}
+
 function renderCategoryChips(categories) {
     const container = document.getElementById('categoryChips');
+    const row = document.getElementById('categoryRow');
     if (!categories.length) {
         container.innerHTML = '';
+        row.style.display = 'none';
+        _updateFilterSection();
         return;
     }
+    row.style.display = '';
     container.innerHTML = categories.map(cat => {
         const active = cat === currentCategoryFilter ? ' active' : '';
         return `<button class="category-chip${active}" onclick="selectCategory('${cat.replace(/'/g, "\\'")}')">${cat}</button>`;
     }).join('');
+    _updateFilterSection();
 }
 
 function selectCategory(cat) {
@@ -388,12 +405,82 @@ function selectCategory(cat) {
     loadRecipes();
 }
 
+async function loadCuisines() {
+    try {
+        const response = await fetch(`${API_URL}/cuisines`);
+        const cuisines = await response.json();
+        renderCuisineChips(cuisines);
+    } catch (_) {}
+}
+
+function renderCuisineChips(cuisines) {
+    const container = document.getElementById('cuisineChips');
+    const row = document.getElementById('cuisineRow');
+    if (!cuisines.length) {
+        container.innerHTML = '';
+        row.style.display = 'none';
+        _updateFilterSection();
+        return;
+    }
+    row.style.display = '';
+    container.innerHTML = cuisines.map(c => {
+        const active = c === currentCuisineFilter ? ' active' : '';
+        return `<button class="category-chip${active}" onclick="selectCuisine('${c.replace(/'/g, "\\'")}')">${c}</button>`;
+    }).join('');
+    _updateFilterSection();
+}
+
+function selectCuisine(cuisine) {
+    currentCuisineFilter = currentCuisineFilter === cuisine ? '' : cuisine;
+    currentPage = 1;
+    document.querySelectorAll('#cuisineChips .category-chip').forEach(el => {
+        el.classList.toggle('active', el.textContent === currentCuisineFilter);
+    });
+    loadRecipes();
+}
+
+async function loadKeywords() {
+    try {
+        const response = await fetch(`${API_URL}/keywords`);
+        const keywords = await response.json();
+        renderKeywordChips(keywords);
+    } catch (_) {}
+}
+
+function renderKeywordChips(keywords) {
+    const container = document.getElementById('keywordChips');
+    const row = document.getElementById('keywordRow');
+    if (!keywords.length) {
+        container.innerHTML = '';
+        row.style.display = 'none';
+        _updateFilterSection();
+        return;
+    }
+    row.style.display = '';
+    container.innerHTML = keywords.map(k => {
+        const active = k === currentKeywordFilter ? ' active' : '';
+        return `<button class="category-chip${active}" onclick="selectKeyword('${k.replace(/'/g, "\\'")}')">${k}</button>`;
+    }).join('');
+    _updateFilterSection();
+}
+
+function selectKeyword(keyword) {
+    currentKeywordFilter = currentKeywordFilter === keyword ? '' : keyword;
+    currentPage = 1;
+    document.querySelectorAll('#keywordChips .category-chip').forEach(el => {
+        el.classList.toggle('active', el.textContent === currentKeywordFilter);
+    });
+    loadRecipes();
+}
+
 async function loadRecipes() {
     try {
         let url = `${API_URL}/recipes?skip=${(currentPage - 1) * LIMIT}&limit=${LIMIT}`;
         if (currentSearch) url += `&search=${encodeURIComponent(currentSearch)}`;
         if (currentIngredientFilter) url += `&ingredient=${encodeURIComponent(currentIngredientFilter)}`;
         if (currentCategoryFilter) url += `&category=${encodeURIComponent(currentCategoryFilter)}`;
+        if (currentCuisineFilter) url += `&cuisine=${encodeURIComponent(currentCuisineFilter)}`;
+        if (currentKeywordFilter) url += `&keyword=${encodeURIComponent(currentKeywordFilter)}`;
 
         const response = await fetch(url);
         const data = await response.json();
@@ -469,7 +556,9 @@ async function openEditModal(recipeId) {
         document.getElementById('editPrepTime').value = durationToMinutes(recipe.prepTime) || '';
         document.getElementById('editCookTime').value = durationToMinutes(recipe.cookTime) || '';
         document.getElementById('editServings').value = recipe.recipeYield ? parseInt(recipe.recipeYield) : '';
-        document.getElementById('editCategory').value = recipe.recipeCategory ? recipe.recipeCategory.join(', ') : '';
+        document.getElementById('editCategory').value = (recipe.recipeCategory || []).join(', ');
+        document.getElementById('editCuisine').value = (recipe.recipeCuisine || []).join(', ');
+        document.getElementById('editKeywords').value = (recipe.keywords || []).join(', ');
 
         const container = document.getElementById('editIngredientsContainer');
         container.innerHTML = '';
@@ -679,6 +768,15 @@ async function openCookingMode(recipeId) {
         const descEl = document.getElementById('cookingDescription');
         descEl.textContent = recipe.description || '';
         descEl.style.display = recipe.description ? '' : 'none';
+
+        const tagsEl = document.getElementById('cookingTags');
+        const tags = [
+            ...(recipe.recipeCategory || []).map(t => `<span class="recipe-tag recipe-tag--category">${t}</span>`),
+            ...(recipe.recipeCuisine || []).map(t => `<span class="recipe-tag recipe-tag--cuisine">${t}</span>`),
+            ...(recipe.keywords || []).map(t => `<span class="recipe-tag">${t}</span>`),
+        ];
+        tagsEl.innerHTML = tags.join('');
+        tagsEl.style.display = tags.length ? '' : 'none';
 
         _cookingRecipe = recipe;
         _originalServings = recipe.recipeYield ? parseInt(recipe.recipeYield) : null;
