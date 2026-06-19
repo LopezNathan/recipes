@@ -369,107 +369,127 @@ async function loadCategories() {
     try {
         const response = await fetch(`${API_URL}/categories`);
         const categories = await response.json();
-        renderCategoryChips(categories);
+        populateCategorySelect(categories);
     } catch (_) {}
-}
-
-function _updateFilterSection() {
-    const anyVisible = ['categoryRow', 'cuisineRow', 'keywordRow']
-        .some(id => document.getElementById(id).style.display !== 'none');
-    document.getElementById('filterSection').style.display = anyVisible ? '' : 'none';
-}
-
-function renderCategoryChips(categories) {
-    const container = document.getElementById('categoryChips');
-    const row = document.getElementById('categoryRow');
-    if (!categories.length) {
-        container.innerHTML = '';
-        row.style.display = 'none';
-        _updateFilterSection();
-        return;
-    }
-    row.style.display = '';
-    container.innerHTML = categories.map(cat => {
-        const active = cat === currentCategoryFilter ? ' active' : '';
-        return `<button class="category-chip${active}" onclick="selectCategory('${cat.replace(/'/g, "\\'")}')">${cat}</button>`;
-    }).join('');
-    _updateFilterSection();
-}
-
-function selectCategory(cat) {
-    currentCategoryFilter = currentCategoryFilter === cat ? '' : cat;
-    currentPage = 1;
-    document.querySelectorAll('.category-chip').forEach(el => {
-        el.classList.toggle('active', el.textContent === currentCategoryFilter);
-    });
-    loadRecipes();
 }
 
 async function loadCuisines() {
     try {
         const response = await fetch(`${API_URL}/cuisines`);
         const cuisines = await response.json();
-        renderCuisineChips(cuisines);
+        populateCuisineSelect(cuisines);
     } catch (_) {}
-}
-
-function renderCuisineChips(cuisines) {
-    const container = document.getElementById('cuisineChips');
-    const row = document.getElementById('cuisineRow');
-    if (!cuisines.length) {
-        container.innerHTML = '';
-        row.style.display = 'none';
-        _updateFilterSection();
-        return;
-    }
-    row.style.display = '';
-    container.innerHTML = cuisines.map(c => {
-        const active = c === currentCuisineFilter ? ' active' : '';
-        return `<button class="category-chip${active}" onclick="selectCuisine('${c.replace(/'/g, "\\'")}')">${c}</button>`;
-    }).join('');
-    _updateFilterSection();
-}
-
-function selectCuisine(cuisine) {
-    currentCuisineFilter = currentCuisineFilter === cuisine ? '' : cuisine;
-    currentPage = 1;
-    document.querySelectorAll('#cuisineChips .category-chip').forEach(el => {
-        el.classList.toggle('active', el.textContent === currentCuisineFilter);
-    });
-    loadRecipes();
 }
 
 async function loadKeywords() {
     try {
         const response = await fetch(`${API_URL}/keywords`);
         const keywords = await response.json();
-        renderKeywordChips(keywords);
+        populateKeywordSelect(keywords);
     } catch (_) {}
 }
 
-function renderKeywordChips(keywords) {
-    const container = document.getElementById('keywordChips');
-    const row = document.getElementById('keywordRow');
-    if (!keywords.length) {
-        container.innerHTML = '';
-        row.style.display = 'none';
-        _updateFilterSection();
-        return;
+function _updateFilterButton() {
+    const hasAny = ['categoryGroup', 'cuisineGroup', 'keywordGroup']
+        .some(id => document.getElementById(id).style.display !== 'none');
+    const btn = document.getElementById('filterToggleBtn');
+    btn.style.display = hasAny ? '' : 'none';
+    if (!hasAny) {
+        document.getElementById('filterPanel').style.display = 'none';
+        btn.classList.remove('open');
     }
-    row.style.display = '';
-    container.innerHTML = keywords.map(k => {
-        const active = k === currentKeywordFilter ? ' active' : '';
-        return `<button class="category-chip${active}" onclick="selectKeyword('${k.replace(/'/g, "\\'")}')">${k}</button>`;
-    }).join('');
-    _updateFilterSection();
+    const activeCount = [currentCategoryFilter, currentCuisineFilter, currentKeywordFilter, currentIngredientFilter].filter(Boolean).length;
+    const badge = document.getElementById('filterBadge');
+    badge.textContent = activeCount;
+    badge.style.display = activeCount ? '' : 'none';
+    document.getElementById('clearFiltersBtn').style.display = activeCount ? '' : 'none';
 }
 
-function selectKeyword(keyword) {
-    currentKeywordFilter = currentKeywordFilter === keyword ? '' : keyword;
+function toggleFilterPanel() {
+    const panel = document.getElementById('filterPanel');
+    const btn = document.getElementById('filterToggleBtn');
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : '';
+    btn.classList.toggle('open', !isOpen);
+}
+
+function clearAllFilters() {
+    currentCategoryFilter = '';
+    currentCuisineFilter = '';
+    currentKeywordFilter = '';
+    currentIngredientFilter = '';
     currentPage = 1;
-    document.querySelectorAll('#keywordChips .category-chip').forEach(el => {
-        el.classList.toggle('active', el.textContent === currentKeywordFilter);
-    });
+    document.getElementById('categorySelect').value = '';
+    document.getElementById('cuisineSelect').value = '';
+    document.getElementById('keywordSelect').value = '';
+    document.getElementById('ingredientFilter').value = '';
+    _updateFilterButton();
+    loadRecipes();
+}
+
+function populateCategorySelect(categories) {
+    const group = document.getElementById('categoryGroup');
+    const select = document.getElementById('categorySelect');
+    if (!categories.length) {
+        group.style.display = 'none';
+        _updateFilterButton();
+        return;
+    }
+    group.style.display = '';
+    select.innerHTML = '<option value="">All categories</option>' +
+        categories.map(c => `<option value="${c}">${c}</option>`).join('');
+    select.value = currentCategoryFilter;
+    _updateFilterButton();
+}
+
+function onCategorySelect(value) {
+    currentCategoryFilter = value;
+    currentPage = 1;
+    _updateFilterButton();
+    loadRecipes();
+}
+
+function populateCuisineSelect(cuisines) {
+    const group = document.getElementById('cuisineGroup');
+    const select = document.getElementById('cuisineSelect');
+    if (!cuisines.length) {
+        group.style.display = 'none';
+        _updateFilterButton();
+        return;
+    }
+    group.style.display = '';
+    select.innerHTML = '<option value="">All cuisines</option>' +
+        cuisines.map(c => `<option value="${c}">${c}</option>`).join('');
+    select.value = currentCuisineFilter;
+    _updateFilterButton();
+}
+
+function onCuisineSelect(value) {
+    currentCuisineFilter = value;
+    currentPage = 1;
+    _updateFilterButton();
+    loadRecipes();
+}
+
+function populateKeywordSelect(keywords) {
+    const group = document.getElementById('keywordGroup');
+    const select = document.getElementById('keywordSelect');
+    if (!keywords.length) {
+        group.style.display = 'none';
+        _updateFilterButton();
+        return;
+    }
+    group.style.display = '';
+    select.innerHTML = '<option value="">All keywords</option>' +
+        keywords.map(k => `<option value="${k}">${k}</option>`).join('');
+    select.value = currentKeywordFilter;
+    _updateFilterButton();
+}
+
+function onKeywordSelect(value) {
+    currentKeywordFilter = value;
+    currentPage = 1;
+    _updateFilterButton();
     loadRecipes();
 }
 

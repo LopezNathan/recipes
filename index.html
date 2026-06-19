@@ -91,20 +91,37 @@
             <div id="homePage" class="page active">
                 <div class="search-filters">
                     <input type="text" id="searchInput" placeholder="Search recipes...">
-                    <input type="text" id="ingredientFilter" placeholder="Filter by ingredient...">
+                    <button class="btn-filter-toggle" id="filterToggleBtn" onclick="toggleFilterPanel()" style="display:none">
+                        Filters
+                        <span class="filter-badge" id="filterBadge" style="display:none"></span>
+                        <svg class="filter-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                    </button>
                 </div>
-                <div class="filter-section" id="filterSection" style="display:none">
-                    <div class="filter-row" id="categoryRow" style="display:none">
-                        <span class="filter-label">Category</span>
-                        <div class="filter-chips" id="categoryChips"></div>
-                    </div>
-                    <div class="filter-row" id="cuisineRow" style="display:none">
-                        <span class="filter-label">Cuisine</span>
-                        <div class="filter-chips" id="cuisineChips"></div>
-                    </div>
-                    <div class="filter-row" id="keywordRow" style="display:none">
-                        <span class="filter-label">Keywords</span>
-                        <div class="filter-chips" id="keywordChips"></div>
+                <div class="filter-panel" id="filterPanel" style="display:none">
+                    <div class="filter-panel-row">
+                        <div class="filter-panel-group">
+                            <label for="ingredientFilter">Ingredient</label>
+                            <input type="text" id="ingredientFilter" placeholder="e.g. chicken">
+                        </div>
+                        <div class="filter-panel-group" id="categoryGroup" style="display:none">
+                            <label for="categorySelect">Category</label>
+                            <select id="categorySelect" onchange="onCategorySelect(this.value)">
+                                <option value="">All categories</option>
+                            </select>
+                        </div>
+                        <div class="filter-panel-group" id="cuisineGroup" style="display:none">
+                            <label for="cuisineSelect">Cuisine</label>
+                            <select id="cuisineSelect" onchange="onCuisineSelect(this.value)">
+                                <option value="">All cuisines</option>
+                            </select>
+                        </div>
+                        <div class="filter-panel-group" id="keywordGroup" style="display:none">
+                            <label for="keywordSelect">Keywords</label>
+                            <select id="keywordSelect" onchange="onKeywordSelect(this.value)">
+                                <option value="">All keywords</option>
+                            </select>
+                        </div>
+                        <button class="btn-clear-filters" id="clearFiltersBtn" onclick="clearAllFilters()" style="display:none">Clear filters</button>
                     </div>
                 </div>
 
