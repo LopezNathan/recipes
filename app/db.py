@@ -26,6 +26,8 @@ class RecipeDatabase(ABC):
         search: Optional[str] = None,
         ingredient: Optional[str] = None,
         category: Optional[str] = None,
+        cuisine: Optional[str] = None,
+        keyword: Optional[str] = None,
         sort_by: str = "date_published",
     ) -> Tuple[List[Recipe], int]:
         pass
@@ -49,6 +51,14 @@ class RecipeDatabase(ABC):
 
     @abstractmethod
     async def get_categories(self) -> List[str]:
+        pass
+
+    @abstractmethod
+    async def get_cuisines(self) -> List[str]:
+        pass
+
+    @abstractmethod
+    async def get_keywords(self) -> List[str]:
         pass
 
 
@@ -116,6 +126,8 @@ class PostgresRecipeDatabase(RecipeDatabase):
         search: Optional[str] = None,
         ingredient: Optional[str] = None,
         category: Optional[str] = None,
+        cuisine: Optional[str] = None,
+        keyword: Optional[str] = None,
         sort_by: str = "date_published",
     ) -> Tuple[List[Recipe], int]:
         conditions: list[str] = []
@@ -133,6 +145,18 @@ class PostgresRecipeDatabase(RecipeDatabase):
             params.append(category)
             conditions.append(
                 f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(recipe_category) AS c WHERE lower(c) = lower(${len(params)}))"
+            )
+
+        if cuisine:
+            params.append(cuisine)
+            conditions.append(
+                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(recipe_cuisine) AS c WHERE lower(c) = lower(${len(params)}))"
+            )
+
+        if keyword:
+            params.append(keyword)
+            conditions.append(
+                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(keywords) AS k WHERE lower(k) = lower(${len(params)}))"
             )
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
@@ -237,3 +261,25 @@ class PostgresRecipeDatabase(RecipeDatabase):
             """
         )
         return [row["category"] for row in rows]
+
+    async def get_cuisines(self) -> List[str]:
+        rows = await self.conn.fetch(
+            """
+            SELECT DISTINCT jsonb_array_elements_text(recipe_cuisine) AS cuisine
+            FROM recipes
+            WHERE recipe_cuisine IS NOT NULL
+            ORDER BY cuisine
+            """
+        )
+        return [row["cuisine"] for row in rows]
+
+    async def get_keywords(self) -> List[str]:
+        rows = await self.conn.fetch(
+            """
+            SELECT DISTINCT jsonb_array_elements_text(keywords) AS keyword
+            FROM recipes
+            WHERE keywords IS NOT NULL
+            ORDER BY keyword
+            """
+        )
+        return [row["keyword"] for row in rows]

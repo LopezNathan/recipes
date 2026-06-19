@@ -96,18 +96,22 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
         search: str | None = None,
         ingredient: str | None = None,
         category: str | None = None,
+        cuisine: str | None = None,
+        keyword: str | None = None,
         sort_by: str = "created_at",
         db: PostgresRecipeDatabase = Depends(get_recipe_db),
     ):
         """
         List all recipes with optional filtering and pagination.
-        
+
         Query parameters:
         - skip: Number of recipes to skip (for pagination)
         - limit: Maximum number of recipes to return
         - search: Search in title and description
         - ingredient: Filter by ingredient
         - category: Filter by category
+        - cuisine: Filter by cuisine
+        - keyword: Filter by keyword
         - sort_by: Sort field (created_at or title)
         """
         recipes, total = await db.list_all(
@@ -116,6 +120,8 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
             search=search,
             ingredient=ingredient,
             category=category,
+            cuisine=cuisine,
+            keyword=keyword,
             sort_by=sort_by,
         )
         
@@ -130,6 +136,16 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
     async def list_categories(db: PostgresRecipeDatabase = Depends(get_recipe_db)):
         """Return all distinct recipe categories sorted alphabetically."""
         return await db.get_categories()
+
+    @fastapi_app.get("/cuisines", response_model=list[str])
+    async def list_cuisines(db: PostgresRecipeDatabase = Depends(get_recipe_db)):
+        """Return all distinct recipe cuisines sorted alphabetically."""
+        return await db.get_cuisines()
+
+    @fastapi_app.get("/keywords", response_model=list[str])
+    async def list_keywords(db: PostgresRecipeDatabase = Depends(get_recipe_db)):
+        """Return all distinct recipe keywords sorted alphabetically."""
+        return await db.get_keywords()
 
     @fastapi_app.get("/recipes/{recipe_id}", response_model=Recipe)
     async def get_recipe(recipe_id: int, db: PostgresRecipeDatabase = Depends(get_recipe_db)):

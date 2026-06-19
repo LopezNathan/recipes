@@ -48,6 +48,8 @@
 
             <p id="cookingDescription" class="cooking-description"></p>
 
+            <div class="recipe-tags" id="cookingTags"></div>
+
             <div class="cooking-body">
                 <div class="cooking-section cooking-ingredients-section">
                     <div class="cooking-ingredients-header">
@@ -91,7 +93,20 @@
                     <input type="text" id="searchInput" placeholder="Search recipes...">
                     <input type="text" id="ingredientFilter" placeholder="Filter by ingredient...">
                 </div>
-                <div class="category-chips" id="categoryChips"></div>
+                <div class="filter-section" id="filterSection" style="display:none">
+                    <div class="filter-row" id="categoryRow" style="display:none">
+                        <span class="filter-label">Category</span>
+                        <div class="filter-chips" id="categoryChips"></div>
+                    </div>
+                    <div class="filter-row" id="cuisineRow" style="display:none">
+                        <span class="filter-label">Cuisine</span>
+                        <div class="filter-chips" id="cuisineChips"></div>
+                    </div>
+                    <div class="filter-row" id="keywordRow" style="display:none">
+                        <span class="filter-label">Keywords</span>
+                        <div class="filter-chips" id="keywordChips"></div>
+                    </div>
+                </div>
 
                 <div id="recipesContainer" class="recipes-list">
                     <div class="empty-state">
@@ -276,11 +291,6 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="editCategory">Category</label>
-                    <input type="text" id="editCategory" placeholder="e.g., Dinner, Dessert, Breakfast">
-                </div>
-
-                <div class="form-group">
                     <label>Ingredients *</label>
                     <div class="ingredients-container" id="editIngredientsContainer"></div>
                     <button type="button" class="btn-secondary" id="editAddIngredientBtn" style="margin-top: 10px;">+ Add Ingredient</button>
@@ -304,6 +314,21 @@
                         <label for="editServings">Servings</label>
                         <input type="number" id="editServings" min="1">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="editCategory">Category</label>
+                    <input type="text" id="editCategory" placeholder="e.g. Dinner, Soup">
+                </div>
+
+                <div class="form-group">
+                    <label for="editCuisine">Cuisine</label>
+                    <input type="text" id="editCuisine" placeholder="e.g. Italian, American">
+                </div>
+
+                <div class="form-group">
+                    <label for="editKeywords">Keywords</label>
+                    <input type="text" id="editKeywords" placeholder="e.g. pasta, comfort food, weeknight">
                 </div>
 
                 <div class="button-group">
