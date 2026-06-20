@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Before committing
+
+Always update `README.md` to reflect any new features, changed behavior, or removed functionality before creating a commit.
+
 ## Commands
 
 ```bash
@@ -48,6 +52,14 @@ A `GET /app-mode` endpoint returns `{"mode": "public"}` or `{"mode": "private"}`
 
 ### Frontend
 `index.html` is a self-contained single-file SPA (no build step). It talks to whichever API the page is served from. Key modes: recipe list view, recipe detail view, and Cooking Mode (step-by-step with multi-timer support). Write tabs (Create, Import, Paste) are hidden on the public app via the `/app-mode` response.
+
+Key frontend components:
+- **Filters panel** — `#filterToggleBtn` / `#filterPanel` (collapsible); `toggleFilterPanel()` in `app.js`. Filters: ingredient text input + category/cuisine/keyword selects. Selects are hidden until recipes with those fields exist.
+- **Recipe tags** — `.recipe-tags` / `.recipe-tag` rendered in Cooking Mode and detail views. Tag variants: `.recipe-tag--category`, `.recipe-tag--cuisine`.
+- **Grocery list** — `.grocery-toolbar` contains `#groceryCustomInput`, `.btn-primary` (Add), and `.grocery-clear-btns` wrapper div holding the two clear buttons. The wrapper exists so mobile CSS can give the input more space (via `1fr auto` grid) while keeping clear buttons equal-width (via `flex: 1` inside the wrapper).
+
+### CSS architecture note
+`static/style.css` has a **file-order dependency**: the grocery-list mobile overrides (`@media (max-width: 768px)`) live at the **very end** of the file, after the base `.grocery-toolbar` styles (~line 1560). If you add grocery mobile styles to the earlier 768px block (line ~1248), the base `display: flex` rule — which comes later — will win over `display: grid` due to cascade order. Always add new grocery mobile overrides at the bottom.
 
 ### Tests
 Tests in `tests/` use `conftest.py` fixtures that connect to a real PostgreSQL test database (`TEST_DATABASE_URL` from `.env`). Each test drops and recreates the `recipes` table for isolation. All tests are async (`asyncio_mode = auto` in `pytest.ini`). The local Postgres container (`make up`) must be running before running tests.

@@ -5,11 +5,16 @@ Personal recipe management app. FastAPI backend, PostgreSQL (Neon), deployed on 
 ## Features
 
 - Create, read, update, delete recipes
-- Search and filter by title, description, ingredients, and category
+- Search and filter by title, description, ingredients, category, cuisine, and keywords
+- Collapsible Filters panel — ingredient text search plus category, cuisine, keyword dropdowns
+- Recipe tags — category, cuisine, and keyword tags stored per recipe and shown in detail view
 - Import recipes from 900+ websites (AllRecipes, Serious Eats, Budget Bytes, etc.)
 - Paste AI-generated recipes in JSON or markdown format
 - Intelligent ingredient parsing — separates quantity from name, handles unicode fractions
-- Cooking Mode — step-by-step view with multi-timer support
+- Cooking Mode — step-by-step view with collapsible ingredients, multi-timer, and Wake Lock
+- Grocery list — add individual ingredients or full recipes, count steppers, custom items, and online shopping links (FreshDirect, HEB)
+- Dark/light mode toggle
+- Mobile-responsive with PWA meta tags and Apple Touch Icon for home screen install
 - Public (read-only) and private (read/write) API endpoints
 
 ## Local Development
@@ -48,7 +53,7 @@ Both `public_app` and `private_app` expose read routes. Write routes are private
 
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
-| GET | `/recipes` | public | List recipes (`search`, `ingredient`, `category`, `skip`, `limit`, `sort_by`) |
+| GET | `/recipes` | public | List recipes (`search`, `ingredient`, `category`, `cuisine`, `keywords`, `skip`, `limit`, `sort_by`) |
 | GET | `/recipes/{id}` | public | Get a recipe |
 | GET | `/app-mode` | public | Returns `{"mode": "public"}` or `{"mode": "private"}` |
 | POST | `/recipes` | private | Create a recipe |
