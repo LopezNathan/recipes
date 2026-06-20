@@ -1047,8 +1047,8 @@ function showPage(pageName) {
 // ============================================================================
 
 const GROCERY_STORES = [
-    { id: 'freshdirect', name: 'FreshDirect', searchUrl: q => `https://www.freshdirect.com/search?search=${encodeURIComponent(q).replace(/%20/g, '+')}` },
-    { id: 'heb',         name: 'HEB',         searchUrl: q => `https://www.heb.com/search?esc=true&q=${encodeURIComponent(q)}` },
+    { id: 'freshdirect', name: 'FreshDirect', searchUrl: q => `https://www.freshdirect.com/search?q=${encodeURIComponent(q)}` },
+    { id: 'heb',         name: 'HEB',         searchUrl: q => `https://www.heb.com/search?q=${encodeURIComponent(q)}` },
 ];
 
 function _getSelectedStore() {
