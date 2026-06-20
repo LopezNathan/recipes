@@ -254,8 +254,10 @@
                         <h2>Grocery List</h2>
                         <input type="text" id="groceryCustomInput" placeholder="Add item..." class="grocery-custom-input">
                         <button class="btn-primary" onclick="addCustomGroceryItem()">Add</button>
-                        <button class="btn-secondary" onclick="clearCheckedGroceryItems()">Clear checked</button>
-                        <button class="btn-danger" onclick="clearGroceryList()">Clear all</button>
+                        <div class="grocery-clear-btns">
+                            <button class="btn-secondary" onclick="clearCheckedGroceryItems()">Clear checked</button>
+                            <button class="btn-danger" onclick="clearGroceryList()">Clear all</button>
+                        </div>
                     </div>
                     <div id="groceryListContainer">
                         <div class="empty-state">

@@ -150,6 +150,7 @@ body {
     transition: all 0.3s ease;
     color: var(--text-primary);
     flex-shrink: 0;
+    padding: 0;
 }
 
 .theme-toggle:hover {
@@ -1273,9 +1274,7 @@ button {
     }
 
     .navbar > .theme-toggle {
-        height: 52px;
-        display: flex;
-        align-items: center;
+        margin-left: 0;
     }
 
     .page-tabs {
@@ -1544,6 +1543,11 @@ button {
 .grocery-toolbar .btn-secondary,
 .grocery-toolbar .btn-danger {
     flex: none;
+}
+
+.grocery-clear-btns {
+    display: flex;
+    gap: 8px;
 }
 
 .grocery-custom-input {
@@ -1919,4 +1923,40 @@ button {
     color: var(--success);
     border-color: var(--success);
     cursor: default;
+}
+
+@media (max-width: 768px) {
+    .grocery-toolbar {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 10px 8px;
+        align-items: center;
+    }
+
+    .grocery-toolbar h2 {
+        grid-column: 1 / -1;
+        margin-right: 0;
+        margin-bottom: 0;
+    }
+
+    .grocery-clear-btns {
+        grid-column: 1 / -1;
+    }
+
+    .grocery-clear-btns .btn-secondary,
+    .grocery-clear-btns .btn-danger {
+        flex: 1;
+        font-size: 0.78em;
+        padding: 9px 10px;
+        text-align: center;
+    }
+
+    .grocery-order-label {
+        flex-basis: 100%;
+        margin-right: 0;
+    }
+
+    .grocery-store-tabs {
+        flex-basis: 100%;
+    }
 }
