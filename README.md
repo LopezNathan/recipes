@@ -16,6 +16,7 @@ Personal recipe management app. FastAPI backend, PostgreSQL (Neon), deployed on 
 - Dark/light mode toggle
 - Mobile-responsive with PWA meta tags and Apple Touch Icon for home screen install
 - Public (read-only) and private (read/write) API endpoints
+- Cache busting — CSS/JS URLs include a content hash (`?v=<hash>`) so browsers always fetch fresh assets after a deployment
 
 ## Local Development
 

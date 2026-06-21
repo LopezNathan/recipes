@@ -1,7 +1,10 @@
 """FastAPI Recipe Application - Dual API Setup."""
 
+import hashlib
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Depends
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
@@ -12,6 +15,17 @@ from app.db import PostgresRecipeDatabase
 from app.scraper import scrape_recipe
 from app.recipe_parser import parse_recipe_content
 from app.image_utils import validate_image_url
+
+
+def _compute_static_version() -> str:
+    h = hashlib.md5()
+    for name in ("static/style.css", "static/app.js"):
+        p = Path(name)
+        if p.is_file():
+            h.update(p.read_bytes())
+    return h.hexdigest()[:8]
+
+STATIC_VERSION = _compute_static_version()
 
 
 @asynccontextmanager
@@ -86,8 +100,10 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
 
     @fastapi_app.get("/")
     async def root():
-        """Serve the main HTML page."""
-        return FileResponse("index.html", media_type="text/html")
+        html = Path("index.html").read_text(encoding="utf-8")
+        html = html.replace('href="/static/style.css"', f'href="/static/style.css?v={STATIC_VERSION}"')
+        html = html.replace('src="/static/app.js"', f'src="/static/app.js?v={STATIC_VERSION}"')
+        return HTMLResponse(content=html)
 
     @fastapi_app.get("/recipes", response_model=dict)
     async def list_recipes(
