@@ -47,11 +47,10 @@ public_app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for public API (only allow GET)
+# Enable CORS for public API: read-only access from any origin, no credentials
 public_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["GET", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -68,14 +67,8 @@ private_app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for private API (allow all methods)
-private_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# No CORS middleware on the private API: its frontend is served same-origin,
+# so cross-origin browser access to the write endpoints is deliberately not enabled.
 private_app.mount("/static", StaticFiles(directory="static"), name="static-private")
 
 # Keep 'app' as alias for backward compatibility with testing
