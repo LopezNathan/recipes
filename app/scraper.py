@@ -1,9 +1,10 @@
 """Recipe scraper utility for importing recipes from URLs."""
 
+import asyncio
+
 from recipe_scrapers import scrape_me
 from app.models import RecipeCreate
 from typing import Optional
-import re
 
 
 def _minutes_to_duration(minutes) -> Optional[str]:
@@ -19,6 +20,12 @@ def _minutes_to_duration(minutes) -> Optional[str]:
 
 
 async def scrape_recipe(url: str) -> Optional[RecipeCreate]:
+    # scrape_me does synchronous network I/O — run it in a thread so the
+    # event loop (and every other request) isn't blocked during the fetch.
+    return await asyncio.to_thread(_scrape_recipe_sync, url)
+
+
+def _scrape_recipe_sync(url: str) -> Optional[RecipeCreate]:
     try:
         scraper = scrape_me(url)
 

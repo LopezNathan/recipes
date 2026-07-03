@@ -2,6 +2,17 @@ const API_URL = '';
 let currentPage = 1;
 let wakeLock = null;
 
+// Escape recipe data before interpolating into innerHTML — recipe content
+// comes from scraped third-party sites and pasted text, so it is untrusted.
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 async function acquireWakeLock() {
     if (!('wakeLock' in navigator)) return;
     try {
@@ -208,12 +219,12 @@ async function handleImportRecipe() {
     const statusDiv = document.getElementById('importStatus');
 
     if (!url) {
-        statusDiv.innerHTML = '⚠️ Please enter a recipe URL';
+        statusDiv.textContent = '⚠️ Please enter a recipe URL';
         statusDiv.style.color = 'var(--warning)';
         return;
     }
 
-    statusDiv.innerHTML = '⏳ Importing recipe...';
+    statusDiv.textContent = '⏳ Importing recipe...';
     statusDiv.style.color = 'var(--primary)';
 
     try {
@@ -225,18 +236,18 @@ async function handleImportRecipe() {
 
         if (response.ok) {
             const recipe = await response.json();
-            statusDiv.innerHTML = `✅ Imported: "${recipe.name}"`;
+            statusDiv.textContent = `✅ Imported: "${recipe.name}"`;
             statusDiv.style.color = 'var(--success)';
             document.getElementById('importUrl').value = '';
             loadRecipes();
             loadCategories();
         } else {
             const error = await response.json();
-            statusDiv.innerHTML = `❌ ${error.detail || 'Failed to import recipe'}`;
+            statusDiv.textContent = `❌ ${error.detail || 'Failed to import recipe'}`;
             statusDiv.style.color = 'var(--danger)';
         }
     } catch (error) {
-        statusDiv.innerHTML = `❌ Error: ${error.message}`;
+        statusDiv.textContent = `❌ Error: ${error.message}`;
         statusDiv.style.color = 'var(--danger)';
     }
 }
@@ -246,12 +257,12 @@ async function handlePasteRecipe() {
     const statusDiv = document.getElementById('pasteStatus');
 
     if (!content) {
-        statusDiv.innerHTML = '⚠️ Please paste a recipe';
+        statusDiv.textContent = '⚠️ Please paste a recipe';
         statusDiv.style.color = 'var(--warning)';
         return;
     }
 
-    statusDiv.innerHTML = '⏳ Parsing recipe...';
+    statusDiv.textContent = '⏳ Parsing recipe...';
     statusDiv.style.color = 'var(--primary)';
 
     try {
@@ -263,18 +274,18 @@ async function handlePasteRecipe() {
 
         if (response.ok) {
             const recipe = await response.json();
-            statusDiv.innerHTML = `✅ Added: "${recipe.name}"`;
+            statusDiv.textContent = `✅ Added: "${recipe.name}"`;
             statusDiv.style.color = 'var(--success)';
             document.getElementById('pasteContent').value = '';
             loadRecipes();
             loadCategories();
         } else {
             const error = await response.json();
-            statusDiv.innerHTML = `❌ ${error.detail || 'Failed to parse recipe'}`;
+            statusDiv.textContent = `❌ ${error.detail || 'Failed to parse recipe'}`;
             statusDiv.style.color = 'var(--danger)';
         }
     } catch (error) {
-        statusDiv.innerHTML = `❌ Error: ${error.message}`;
+        statusDiv.textContent = `❌ Error: ${error.message}`;
         statusDiv.style.color = 'var(--danger)';
     }
 }
@@ -437,7 +448,7 @@ function populateCategorySelect(categories) {
     }
     group.style.display = '';
     select.innerHTML = '<option value="">All categories</option>' +
-        categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     select.value = currentCategoryFilter;
     _updateFilterButton();
 }
@@ -459,7 +470,7 @@ function populateCuisineSelect(cuisines) {
     }
     group.style.display = '';
     select.innerHTML = '<option value="">All cuisines</option>' +
-        cuisines.map(c => `<option value="${c}">${c}</option>`).join('');
+        cuisines.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     select.value = currentCuisineFilter;
     _updateFilterButton();
 }
@@ -481,7 +492,7 @@ function populateKeywordSelect(keywords) {
     }
     group.style.display = '';
     select.innerHTML = '<option value="">All keywords</option>' +
-        keywords.map(k => `<option value="${k}">${k}</option>`).join('');
+        keywords.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join('');
     select.value = currentKeywordFilter;
     _updateFilterButton();
 }
@@ -522,19 +533,19 @@ function renderRecipes(recipes) {
 
     container.innerHTML = recipes.map(recipe => {
         const img = recipe.image
-            ? `<img class="recipe-card-img" src="${recipe.image}" alt="${recipe.name}">`
+            ? `<img class="recipe-card-img" src="${escapeHtml(recipe.image)}" alt="${escapeHtml(recipe.name)}">`
             : `<div class="recipe-card-img-placeholder">🍽️</div>`;
 
         const metaParts = [];
         if (recipe.prepTime) metaParts.push(`⏱️ ${formatDuration(recipe.prepTime)} prep`);
         if (recipe.cookTime) metaParts.push(`🔥 ${formatDuration(recipe.cookTime)} cook`);
-        if (recipe.recipeYield) metaParts.push(`🍽️ ${recipe.recipeYield}`);
+        if (recipe.recipeYield) metaParts.push(`🍽️ ${escapeHtml(recipe.recipeYield)}`);
 
         return `
         <div class="recipe-card" onclick="openCookingMode(${recipe.id})">
             ${img}
             <div class="recipe-card-body">
-                <div class="recipe-card-title">${recipe.name}</div>
+                <div class="recipe-card-title">${escapeHtml(recipe.name)}</div>
                 ${metaParts.length ? `<div class="recipe-card-meta">${metaParts.join(' · ')}</div>` : ''}
                 ${isPrivate ? `<div class="recipe-card-actions" onclick="event.stopPropagation()">
                     <button class="btn-secondary" onclick="openEditModal(${recipe.id})">Edit</button>
@@ -586,7 +597,7 @@ async function openEditModal(recipeId) {
             const div = document.createElement('div');
             div.className = 'ingredient-item';
             div.innerHTML = `
-                <input type="text" placeholder="e.g., 2 cups flour" class="ingredient-text" value="${ing}">
+                <input type="text" placeholder="e.g., 2 cups flour" class="ingredient-text" value="${escapeHtml(ing)}">
                 <button type="button" class="btn-danger btn-remove-ingredient">Remove</button>
             `;
             container.appendChild(div);
@@ -746,8 +757,8 @@ function _renderIngredients(recipe, factor) {
         return `
             <div class="cooking-ingredient-item" data-ingredient-id="${idx}">
                 <input type="checkbox" id="ing-${idx}" class="ingredient-checkbox">
-                <label for="ing-${idx}"><span>${_boldQuantity(scaled)}</span></label>
-                <button class="ing-add-to-list-btn" data-ing="${scaled.replace(/"/g, '&quot;')}" title="Add to grocery list">+</button>
+                <label for="ing-${idx}"><span>${_boldQuantity(escapeHtml(scaled))}</span></label>
+                <button class="ing-add-to-list-btn" data-ing="${escapeHtml(scaled)}" title="Add to grocery list">+</button>
             </div>`;
     }).join('');
     list.querySelectorAll('input').forEach(cb => {
@@ -791,9 +802,9 @@ async function openCookingMode(recipeId) {
 
         const tagsEl = document.getElementById('cookingTags');
         const tags = [
-            ...(recipe.recipeCategory || []).map(t => `<span class="recipe-tag recipe-tag--category">${t}</span>`),
-            ...(recipe.recipeCuisine || []).map(t => `<span class="recipe-tag recipe-tag--cuisine">${t}</span>`),
-            ...(recipe.keywords || []).map(t => `<span class="recipe-tag">${t}</span>`),
+            ...(recipe.recipeCategory || []).map(t => `<span class="recipe-tag recipe-tag--category">${escapeHtml(t)}</span>`),
+            ...(recipe.recipeCuisine || []).map(t => `<span class="recipe-tag recipe-tag--cuisine">${escapeHtml(t)}</span>`),
+            ...(recipe.keywords || []).map(t => `<span class="recipe-tag">${escapeHtml(t)}</span>`),
         ];
         tagsEl.innerHTML = tags.join('');
         tagsEl.style.display = tags.length ? '' : 'none';
@@ -843,7 +854,7 @@ async function openCookingMode(recipeId) {
                 return `
                     <div class="cooking-instruction-step" data-step-id="${idx}">
                         <div class="cooking-instruction-step-number">${idx + 1}</div>
-                        <div class="cooking-instruction-text">${instruction.trim()}</div>
+                        <div class="cooking-instruction-text">${escapeHtml(instruction.trim())}</div>
                         ${timerHTML}
                     </div>
                 `;
@@ -1105,8 +1116,8 @@ function renderShopLinks() {
     panel.innerHTML = unchecked.map(item => {
         const url = store.searchUrl(_ingredientSearchText(item.text));
         const display = _scaleIngredient(item.text, item.count || 1);
-        return `<a class="shop-link-item" href="${url}" target="_blank" rel="noopener noreferrer">
-            <span class="shop-link-name">${display}</span>
+        return `<a class="shop-link-item" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+            <span class="shop-link-name">${escapeHtml(display)}</span>
             <span class="shop-link-arrow">${store.name} →</span>
         </a>`;
     }).join('');
@@ -1233,12 +1244,12 @@ function renderGroceryList() {
 
     container.innerHTML = Object.entries(groups).map(([recipeName, items]) => `
         <div class="grocery-group">
-            <div class="grocery-group-name">${recipeName}</div>
+            <div class="grocery-group-name">${escapeHtml(recipeName)}</div>
             ${items.map(item => `
                 <div class="grocery-item${item.checked ? ' checked' : ''}" data-id="${item.id}">
                     <input type="checkbox" class="grocery-checkbox" ${item.checked ? 'checked' : ''}
                         onchange="toggleGroceryItem(${item.id})">
-                    <span class="grocery-item-text">${_scaleIngredient(item.text, item.count || 1)}</span>
+                    <span class="grocery-item-text">${escapeHtml(_scaleIngredient(item.text, item.count || 1))}</span>
                     <div class="grocery-count-stepper">
                         <button class="grocery-count-btn" onclick="changeGroceryItemCount(${item.id}, -1)">−</button>
                         <span class="grocery-count-value">${item.count || 1}</span>
