@@ -60,7 +60,7 @@ Both `public_app` and `private_app` expose read routes. Write routes are private
 | POST | `/recipes` | private | Create a recipe |
 | PUT | `/recipes/{id}` | private | Update a recipe |
 | DELETE | `/recipes/{id}` | private | Delete a recipe |
-| POST | `/import` | private | Import from URL |
+| POST | `/import` | private | Import from URL (public http(s) addresses only) |
 | POST | `/paste` | private | Paste JSON or markdown recipe |
 | POST | `/search` | public | Advanced search |
 
@@ -68,26 +68,30 @@ Interactive docs at `/docs` when running locally.
 
 ### Ingredient format
 
-Ingredients can be objects or plain strings:
+Ingredients are plain strings (schema.org `recipeIngredient`):
 
 ```json
-[
-  {"name": "pasta", "quantity": "400g"},
-  "salt to taste"
-]
+["400g pasta", "salt to taste"]
 ```
+
+### URL fetching
+
+URLs fetched server-side (recipe import, image validation) must resolve to
+public addresses — loopback, private-network, and link-local hosts are
+rejected to prevent SSRF.
 
 ## Project Structure
 
 ```
 main.py              # FastAPI app instances and route setup
-version.txt          # Current version number
 app/
   database.py        # asyncpg pool, schema creation
   db.py              # PostgresRecipeDatabase (CRUD)
   models.py          # Pydantic request/response models
   scraper.py         # URL import via recipe-scrapers
-  recipe_parser.py   # JSON/markdown paste parser
+  recipe_parser.py   # HTML/JSON/markdown paste parser
+  image_utils.py     # Image URL validation
+  url_safety.py      # SSRF guard for user-supplied URLs
 index.html           # Frontend HTML
 static/
   style.css          # Styles

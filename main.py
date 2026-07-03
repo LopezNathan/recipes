@@ -1,5 +1,6 @@
 """FastAPI Recipe Application - Dual API Setup."""
 
+import asyncio
 import hashlib
 from pathlib import Path
 
@@ -15,6 +16,7 @@ from app.db import PostgresRecipeDatabase
 from app.scraper import scrape_recipe
 from app.recipe_parser import parse_recipe_content
 from app.image_utils import validate_image_url
+from app.url_safety import is_public_http_url
 
 
 def _compute_static_version() -> str:
@@ -45,11 +47,10 @@ public_app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for public API (only allow GET)
+# Enable CORS for public API: read-only access from any origin, no credentials
 public_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["GET", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -66,14 +67,8 @@ private_app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for private API (allow all methods)
-private_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# No CORS middleware on the private API: its frontend is served same-origin,
+# so cross-origin browser access to the write endpoints is deliberately not enabled.
 private_app.mount("/static", StaticFiles(directory="static"), name="static-private")
 
 # Keep 'app' as alias for backward compatibility with testing
@@ -255,6 +250,13 @@ async def import_recipe(
     }
     ```
     """
+    # is_public_http_url does DNS resolution — keep it off the event loop
+    if not await asyncio.to_thread(is_public_http_url, import_request.url):
+        raise HTTPException(
+            status_code=400,
+            detail="URL must be a public http(s) address."
+        )
+
     # Scrape recipe from URL
     recipe_data = await scrape_recipe(import_request.url)
 

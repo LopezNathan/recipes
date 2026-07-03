@@ -52,6 +52,8 @@ A `GET /app-mode` endpoint returns `{"mode": "public"}` or `{"mode": "private"}`
 
 `scrape_recipe()` runs the synchronous `recipe-scrapers` fetch via `asyncio.to_thread()` — keep it off the event loop if you touch it.
 
+Any user-supplied URL fetched server-side (`/import`, image validation) must first pass `app/url_safety.py:is_public_http_url()`, which rejects hosts resolving to loopback/private/link-local addresses (SSRF guard). `validate_image_url()` follows redirects manually and re-checks every hop. `is_public_http_url()` does DNS resolution — call it via `asyncio.to_thread()` from async code.
+
 ### Frontend
 `index.html` is a self-contained single-file SPA (no build step). It talks to whichever API the page is served from. Key modes: recipe list view, recipe detail view, and Cooking Mode (step-by-step with multi-timer support). Write tabs (Create, Import, Paste) are hidden on the public app via the `/app-mode` response.
 
