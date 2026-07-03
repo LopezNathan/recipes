@@ -41,17 +41,21 @@ A `GET /app-mode` endpoint returns `{"mode": "public"}` or `{"mode": "private"}`
 ### Database
 - `app/database.py` — asyncpg connection pool setup. Handles Neon SSL by stripping `sslmode` from the DSN and passing an `ssl.create_default_context()` explicitly. Runs `CREATE TABLE IF NOT EXISTS` on startup (no migrations tool).
 - `app/db.py` — `RecipeDatabase` ABC and `PostgresRecipeDatabase` concrete implementation. Route handlers receive a connection via FastAPI dependency injection (`get_recipe_db`), never touching the pool directly.
-- `app/models.py` — Pydantic models for API request/response. `Ingredient` has optional `quantity`. `ingredients` fields accept `Union[str, Ingredient]` lists everywhere.
+- `app/models.py` — Pydantic models for API request/response, using schema.org Recipe field names (`recipeIngredient`, `prepTime`, `recipeYield`, …). Ingredients are plain strings (`list[str]`, e.g. `"2 cups flour"`) — there is no structured `Ingredient` model.
 
 ### Import / paste pipeline
 `POST /import` → `app/scraper.py:scrape_recipe()` (uses `recipe-scrapers` library, 900+ sites) → `RecipeCreate` → `db.create()`
 
-`POST /paste` → `app/recipe_parser.py:parse_recipe_content()` (auto-detects JSON vs markdown) → `RecipeCreate` → `db.create()`
+`POST /paste` → `app/recipe_parser.py:parse_recipe_content()` (auto-detects HTML with schema.org microdata, then JSON, then markdown) → `RecipeCreate` → `db.create()`
 
-`recipe_parser.py:parse_ingredient()` handles quantity extraction from raw strings, including unicode fractions (½ ¼ ⅓) and bullet-point formats (`name • qty`).
+`recipe_parser.py:_parse_html_ingredient()` extracts flat ingredient strings from HTML exports (e.g. Paprika), handling quantity/unit splitting and skipping section headers (`_is_section_header()`).
+
+`scrape_recipe()` runs the synchronous `recipe-scrapers` fetch via `asyncio.to_thread()` — keep it off the event loop if you touch it.
 
 ### Frontend
 `index.html` is a self-contained single-file SPA (no build step). It talks to whichever API the page is served from. Key modes: recipe list view, recipe detail view, and Cooking Mode (step-by-step with multi-timer support). Write tabs (Create, Import, Paste) are hidden on the public app via the `/app-mode` response.
+
+Recipe data is untrusted (scraped from third-party sites / pasted): any value interpolated into an `innerHTML` template in `app.js` must go through `escapeHtml()` (defined at the top of the file). Plain-text nodes should use `textContent` instead.
 
 Key frontend components:
 - **Filters panel** — `#filterToggleBtn` / `#filterPanel` (collapsible); `toggleFilterPanel()` in `app.js`. Filters: ingredient text input + category/cuisine/keyword selects. Selects are hidden until recipes with those fields exist.
