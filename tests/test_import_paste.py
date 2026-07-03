@@ -235,3 +235,15 @@ def test_paste_recipe_json_legacy_fields(client):
 def test_import_recipe_missing_url(client):
     response = client.post("/import", json={})
     assert response.status_code == 422
+
+
+def test_import_rejects_internal_urls(client):
+    for url in (
+        "http://127.0.0.1:8001/recipes",
+        "http://localhost/recipe",
+        "http://169.254.169.254/latest/meta-data/",
+        "file:///etc/passwd",
+    ):
+        response = client.post("/import", json={"url": url})
+        assert response.status_code == 400, url
+        assert "public" in response.json()["detail"]
