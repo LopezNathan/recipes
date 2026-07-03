@@ -43,6 +43,13 @@ class Recipe(RecipeBase):
     dateModified: datetime
 
 
+class RecipeListResponse(BaseModel):
+    recipes: list[Recipe]
+    total: int
+    skip: int
+    limit: int
+
+
 class RecipePasteRequest(BaseModel):
     content: str
 

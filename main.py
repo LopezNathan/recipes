@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 
-from app.models import Recipe, RecipeCreate, RecipeUpdate, SearchRequest, RecipeImportRequest, RecipePasteRequest
+from app.models import Recipe, RecipeCreate, RecipeUpdate, RecipeListResponse, SearchRequest, RecipeImportRequest, RecipePasteRequest
 from app.database import init_db, close_db, get_pool
 from app.db import PostgresRecipeDatabase
 from app.scraper import scrape_recipe
@@ -103,7 +103,7 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
         html = html.replace('src="/static/app.js"', f'src="/static/app.js?v={STATIC_VERSION}"')
         return HTMLResponse(content=html)
 
-    @fastapi_app.get("/recipes", response_model=dict)
+    @fastapi_app.get("/recipes", response_model=RecipeListResponse)
     async def list_recipes(
         skip: int = Query(0, ge=0),
         limit: int = Query(100, ge=1, le=500),
