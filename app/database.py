@@ -106,8 +106,12 @@ CREATE_TABLE_SQL = """
       AND jsonb_array_length(recipe_ingredient) > 0
       AND jsonb_typeof(recipe_ingredient->0) = 'object';
 
+    -- The category/cuisine/keyword filters use jsonb_array_elements_text + lower(),
+    -- which a default gin(recipe_category) index can't serve, so it was pure
+    -- write-time overhead. Drop it (idempotent no-op once removed from prod).
+    DROP INDEX IF EXISTS idx_recipes_recipe_category;
+
     CREATE INDEX IF NOT EXISTS idx_recipes_name           ON recipes (name);
-    CREATE INDEX IF NOT EXISTS idx_recipes_recipe_category ON recipes USING gin(recipe_category);
     CREATE INDEX IF NOT EXISTS idx_recipes_date_published  ON recipes (date_published DESC);
 """
 
