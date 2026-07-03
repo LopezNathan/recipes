@@ -109,9 +109,10 @@ docker-compose.yml          # Production containers
 
 ### CI/CD
 
-Pushing to `main` triggers a GitHub Actions workflow that:
-1. Builds the Docker image and pushes it to GHCR (`ghcr.io/lopeznathan/recipes`) tagged as both `latest` and the version from `version.txt`
+The workflow (`.github/workflows/deploy.yml`) runs on pushes to `main` and on `v*` tags:
+1. Builds the Docker image and pushes it to GHCR (`ghcr.io/lopeznathan/recipes`). Every run updates `:latest`; a `v*` tag push also publishes `:<version>` (the tag with the leading `v` stripped).
 2. SSHes into the server and runs `docker compose pull && docker compose up -d`
+3. On a `v*` tag, creates a GitHub release with auto-generated notes.
 
 The deploy job requires these repository secrets:
 - `DEPLOY_KEY` — private SSH key authorized on the server
@@ -120,8 +121,13 @@ The deploy job requires these repository secrets:
 
 ### Releasing a new version
 
-1. Update `version.txt` with the new version and push
-2. Run `make release` to create and push the git tag
+Versioning is git-tag-only (there is no `version.txt`). `make release` bumps from the latest tag and pushes a new `v*` tag:
+
+- `make release` — patch bump (e.g. `v0.4.2` → `v0.4.3`)
+- `make release BUMP=minor` — minor bump (`v0.4.2` → `v0.5.0`)
+- `make release BUMP=major` — major bump (`v0.4.2` → `v1.0.0`)
+
+Pushing the tag triggers the workflow above, which builds the `:latest` and `:<version>` images, deploys, and publishes a GitHub release with notes auto-generated from merged PR titles.
 
 ### Production architecture
 
