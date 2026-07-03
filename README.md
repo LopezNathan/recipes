@@ -62,7 +62,9 @@ Both `public_app` and `private_app` expose read routes. Write routes are private
 | DELETE | `/recipes/{id}` | private | Delete a recipe |
 | POST | `/import` | private | Import from URL (public http(s) addresses only) |
 | POST | `/paste` | private | Paste JSON or markdown recipe |
-| POST | `/search` | public | Advanced search |
+| POST | `/search` | public | Advanced search (`max_results` capped at 100) |
+
+`GET /recipes` validates pagination: `skip >= 0` and `1 <= limit <= 500` (out-of-range values return `422`). `POST /recipes`, `/import`, and `/paste` all return `201 Created`.
 
 Interactive docs at `/docs` when running locally.
 
@@ -90,6 +92,7 @@ app/
   models.py          # Pydantic request/response models
   scraper.py         # URL import via recipe-scrapers
   recipe_parser.py   # HTML/JSON/markdown paste parser
+  duration.py        # Shared minutes -> ISO 8601 duration helper
   image_utils.py     # Image URL validation
   url_safety.py      # SSRF guard for user-supplied URLs
 index.html           # Frontend HTML

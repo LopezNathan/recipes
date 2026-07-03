@@ -4,7 +4,7 @@ import asyncio
 import hashlib
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,10 +19,13 @@ from app.image_utils import validate_image_url
 from app.url_safety import is_public_http_url
 
 
+BASE_DIR = Path(__file__).resolve().parent
+
+
 def _compute_static_version() -> str:
     h = hashlib.md5()
     for name in ("static/style.css", "static/app.js"):
-        p = Path(name)
+        p = BASE_DIR / name
         if p.is_file():
             h.update(p.read_bytes())
     return h.hexdigest()[:8]
@@ -54,7 +57,7 @@ public_app.add_middleware(
     allow_methods=["GET", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
-public_app.mount("/static", StaticFiles(directory="static"), name="static-public")
+public_app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static-public")
 
 
 # ============================================================================
@@ -69,7 +72,7 @@ private_app = FastAPI(
 
 # No CORS middleware on the private API: its frontend is served same-origin,
 # so cross-origin browser access to the write endpoints is deliberately not enabled.
-private_app.mount("/static", StaticFiles(directory="static"), name="static-private")
+private_app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static-private")
 
 # Keep 'app' as alias for backward compatibility with testing
 app = private_app
@@ -95,15 +98,15 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
 
     @fastapi_app.get("/")
     async def root():
-        html = Path("index.html").read_text(encoding="utf-8")
+        html = (BASE_DIR / "index.html").read_text(encoding="utf-8")
         html = html.replace('href="/static/style.css"', f'href="/static/style.css?v={STATIC_VERSION}"')
         html = html.replace('src="/static/app.js"', f'src="/static/app.js?v={STATIC_VERSION}"')
         return HTMLResponse(content=html)
 
     @fastapi_app.get("/recipes", response_model=dict)
     async def list_recipes(
-        skip: int = 0,
-        limit: int = 100,
+        skip: int = Query(0, ge=0),
+        limit: int = Query(100, ge=1, le=500),
         search: str | None = None,
         ingredient: str | None = None,
         category: str | None = None,
@@ -272,7 +275,7 @@ async def import_recipe(
     return await db.create(recipe_data)
 
 
-@private_app.post("/paste", response_model=Recipe)
+@private_app.post("/paste", response_model=Recipe, status_code=201)
 async def paste_recipe(paste_request: RecipePasteRequest, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
     """
     Paste in an AI-generated recipe in JSON or markdown format.

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
 
@@ -52,7 +52,7 @@ class RecipePasteRequest(BaseModel):
 class SearchRequest(BaseModel):
     query: str
     search_fields: Optional[list[str]] = None
-    max_results: int = 10
+    max_results: int = Field(default=10, ge=1, le=100)
 
 
 class RecipeImportRequest(BaseModel):

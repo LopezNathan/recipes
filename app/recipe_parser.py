@@ -1,22 +1,14 @@
 """Parser for AI-generated recipes in JSON, markdown, and HTML formats."""
 
 import json
+import logging
 import re
 from typing import Optional
 from bs4 import BeautifulSoup
 from app.models import RecipeCreate
+from app.duration import minutes_to_duration
 
-
-def _minutes_to_duration(minutes) -> Optional[str]:
-    if minutes is None:
-        return None
-    minutes = int(minutes)
-    hours, mins = divmod(minutes, 60)
-    if hours and mins:
-        return f"PT{hours}H{mins}M"
-    if hours:
-        return f"PT{hours}H"
-    return f"PT{mins}M"
+logger = logging.getLogger(__name__)
 
 
 def _parse_time_text(text: str) -> Optional[int]:
@@ -122,7 +114,7 @@ def parse_recipe_json(content: str) -> Optional[RecipeCreate]:
                     if isinstance(v, str) and v.startswith("PT"):
                         return v
                     try:
-                        return _minutes_to_duration(int(v))
+                        return minutes_to_duration(int(v))
                     except (ValueError, TypeError):
                         pass
             return None
@@ -152,10 +144,10 @@ def parse_recipe_json(content: str) -> Optional[RecipeCreate]:
             url=data.get("url") or data.get("source_url"),
         )
     except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
+        logger.warning("JSON parsing error: %s", e)
         return None
     except Exception as e:
-        print(f"Error parsing recipe: {e}")
+        logger.warning("Error parsing recipe: %s", e)
         return None
 
 
@@ -196,11 +188,11 @@ def parse_recipe_markdown(content: str) -> Optional[RecipeCreate]:
 
         prep_match = re.search(r'Prep\s*Time:?\s*(\d+)', content, re.IGNORECASE)
         if prep_match:
-            prep_time = _minutes_to_duration(int(prep_match.group(1)))
+            prep_time = minutes_to_duration(int(prep_match.group(1)))
 
         cook_match = re.search(r'Cook\s*Time:?\s*(\d+)', content, re.IGNORECASE)
         if cook_match:
-            cook_time = _minutes_to_duration(int(cook_match.group(1)))
+            cook_time = minutes_to_duration(int(cook_match.group(1)))
 
         cat_match = re.search(r'Category:?\s*(.+?)(?:\n|$)', content, re.IGNORECASE)
         if cat_match:
@@ -226,7 +218,7 @@ def parse_recipe_markdown(content: str) -> Optional[RecipeCreate]:
             image=image,
         )
     except Exception as e:
-        print(f"Error parsing markdown recipe: {e}")
+        logger.warning("Error parsing markdown recipe: %s", e)
         return None
 
 
@@ -253,14 +245,14 @@ def parse_recipe_html(content: str) -> Optional[RecipeCreate]:
             instructions = '\n\n'.join(steps)
 
         prep_el = soup.find(attrs={'itemprop': 'prepTime'})
-        prep_time = _minutes_to_duration(_parse_time_text(prep_el.get_text())) if prep_el else None
+        prep_time = minutes_to_duration(_parse_time_text(prep_el.get_text())) if prep_el else None
 
         cook_el = soup.find(attrs={'itemprop': 'cookTime'})
-        cook_time = _minutes_to_duration(_parse_time_text(cook_el.get_text())) if cook_el else None
+        cook_time = minutes_to_duration(_parse_time_text(cook_el.get_text())) if cook_el else None
 
         if not prep_time and not cook_time:
             total_el = soup.find(attrs={'itemprop': 'totalTime'})
-            cook_time = _minutes_to_duration(_parse_time_text(total_el.get_text())) if total_el else None
+            cook_time = minutes_to_duration(_parse_time_text(total_el.get_text())) if total_el else None
 
         url = None
         source_el = soup.find(attrs={'itemprop': 'url'})
@@ -310,7 +302,7 @@ def parse_recipe_html(content: str) -> Optional[RecipeCreate]:
             url=url,
         )
     except Exception as e:
-        print(f"Error parsing HTML recipe: {e}")
+        logger.warning("Error parsing HTML recipe: %s", e)
         return None
 
 
