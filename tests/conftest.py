@@ -41,3 +41,18 @@ def client():
         yield test_client
 
     db_module._pool = None
+
+
+@pytest.fixture
+def public_client():
+    """TestClient bound to the read-only public_app."""
+    asyncio.run(_reset_table())
+
+    db_module.DATABASE_URL = TEST_DATABASE_URL
+    db_module._use_ssl = False
+    db_module._pool = None
+
+    with TestClient(main.public_app) as test_client:
+        yield test_client
+
+    db_module._pool = None
