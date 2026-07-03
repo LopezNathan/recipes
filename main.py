@@ -114,7 +114,7 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
         category: str | None = None,
         cuisine: str | None = None,
         keyword: str | None = None,
-        sort_by: str = "created_at",
+        sort_by: str = "date_published",
         db: PostgresRecipeDatabase = Depends(get_recipe_db),
     ):
         """
@@ -128,7 +128,7 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
         - category: Filter by category
         - cuisine: Filter by cuisine
         - keyword: Filter by keyword
-        - sort_by: Sort field (created_at or title)
+        - sort_by: Sort field (date_published for newest first, anything else sorts by name)
         """
         recipes, total = await db.list_all(
             skip=skip,
