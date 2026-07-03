@@ -1,22 +1,14 @@
 """Recipe scraper utility for importing recipes from URLs."""
 
 import asyncio
+import logging
 
 from recipe_scrapers import scrape_me
 from app.models import RecipeCreate
+from app.duration import minutes_to_duration
 from typing import Optional
 
-
-def _minutes_to_duration(minutes) -> Optional[str]:
-    if minutes is None:
-        return None
-    minutes = int(minutes)
-    hours, mins = divmod(minutes, 60)
-    if hours and mins:
-        return f"PT{hours}H{mins}M"
-    if hours:
-        return f"PT{hours}H"
-    return f"PT{mins}M"
+logger = logging.getLogger(__name__)
 
 
 async def scrape_recipe(url: str) -> Optional[RecipeCreate]:
@@ -35,8 +27,8 @@ def _scrape_recipe_sync(url: str) -> Optional[RecipeCreate]:
         instructions = scraper.instructions()
         image = scraper.image() if hasattr(scraper, 'image') else None
 
-        prepTime = _minutes_to_duration(scraper.prep_time())
-        cookTime = _minutes_to_duration(scraper.cook_time())
+        prepTime = minutes_to_duration(scraper.prep_time())
+        cookTime = minutes_to_duration(scraper.cook_time())
 
         recipeYield = None
         try:
@@ -59,5 +51,5 @@ def _scrape_recipe_sync(url: str) -> Optional[RecipeCreate]:
         return recipe
 
     except Exception as e:
-        print(f"Error scraping recipe from {url}: {str(e)}")
+        logger.warning("Error scraping recipe from %s: %s", url, e)
         return None

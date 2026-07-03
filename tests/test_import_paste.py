@@ -16,7 +16,7 @@ def test_paste_recipe_json_format(client):
 
     response = client.post("/paste", json={"content": json.dumps(recipe_json)})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Pasta Primavera"
     assert data["description"] == "Fresh vegetable pasta"
@@ -53,7 +53,7 @@ Category: Dessert
 
     response = client.post("/paste", json={"content": recipe_markdown})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Chocolate Brownies"
     assert "Dense and fudgy" in data["description"]
@@ -81,7 +81,7 @@ This is a delicious homemade tomato soup recipe.
 
     response = client.post("/paste", json={"content": recipe_markdown})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Tomato Soup"
     assert data["description"] == "This is a delicious homemade tomato soup recipe."
@@ -106,7 +106,7 @@ It's loaded with vegetables and tender beef chunks.
 
     response = client.post("/paste", json={"content": recipe_markdown})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Beef Stew"
     assert "hearty beef stew" in data["description"].lower()
@@ -127,7 +127,7 @@ def test_paste_recipe_json_with_all_fields(client):
 
     response = client.post("/paste", json={"content": json.dumps(recipe_json)})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["image"] == "https://example.com/risotto.jpg"
     assert data["recipeCategory"] == ["italian"]
@@ -142,7 +142,7 @@ def test_paste_recipe_json_minimal_fields(client):
 
     response = client.post("/paste", json={"content": json.dumps(recipe_json)})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Fried Egg"
     assert len(data["recipeIngredient"]) == 2
@@ -157,7 +157,7 @@ def test_paste_recipe_auto_detection_json(client):
 
     response = client.post("/paste", json={"content": json.dumps(recipe_json)})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Pancakes"
 
@@ -179,7 +179,7 @@ Quick egg dish.
 
     response = client.post("/paste", json={"content": recipe_markdown})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Omelette"
 
@@ -210,7 +210,7 @@ Make it for special weekend breakfasts or brunch with friends.
 
     response = client.post("/paste", json={"content": recipe_markdown})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["name"] == "French Toast"
     assert "crispy on the outside" in data["description"]
@@ -227,7 +227,7 @@ def test_paste_recipe_json_legacy_fields(client):
 
     response = client.post("/paste", json={"content": json.dumps(recipe_json)})
 
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert len(data["recipeIngredient"]) == 4
 

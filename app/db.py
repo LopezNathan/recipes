@@ -197,7 +197,8 @@ class PostgresRecipeDatabase(RecipeDatabase):
             return []
 
         rows = await self.conn.fetch(
-            f"SELECT * FROM recipes WHERE {' OR '.join(conditions)} LIMIT $2",
+            f"SELECT * FROM recipes WHERE {' OR '.join(conditions)} "
+            "ORDER BY date_published DESC, id DESC LIMIT $2",
             f"%{query}%",
             max_results,
         )
