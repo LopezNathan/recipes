@@ -113,6 +113,11 @@ Pushing to `main` triggers a GitHub Actions workflow that:
 1. Builds the Docker image and pushes it to GHCR (`ghcr.io/lopeznathan/recipes`) tagged as both `latest` and the version from `version.txt`
 2. SSHes into the server and runs `docker compose pull && docker compose up -d`
 
+The deploy job requires these repository secrets:
+- `DEPLOY_KEY` — private SSH key authorized on the server
+- `SERVER_IP` — server host/IP to SSH into
+- `SSH_KNOWN_HOSTS` — the server's pinned host key (verified with `StrictHostKeyChecking=yes` instead of a blind `ssh-keyscan` at deploy time). Generate it from a trusted network with `ssh-keyscan -H <server-ip>` and paste the output into the secret.
+
 ### Releasing a new version
 
 1. Update `version.txt` with the new version and push

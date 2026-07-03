@@ -50,13 +50,18 @@ jobs:
       - name: Set up SSH
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+          # Pin the server's host key from a secret instead of trusting
+          # whatever ssh-keyscan returns at deploy time — a live keyscan
+          # accepts any key presented, which defeats MITM protection.
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
       - name: Pull and restart
         run: |
-          ssh -i ~/.ssh/id_ed25519 ubuntu@${{ secrets.SERVER_IP }} \
+          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_ed25519 ubuntu@${{ secrets.SERVER_IP }} \
             'cd /opt/recipes && sudo docker compose pull && sudo docker compose up -d --remove-orphans'
 
   release:
