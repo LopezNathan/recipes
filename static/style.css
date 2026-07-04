@@ -1612,6 +1612,14 @@ button {
 .grocery-item-text {
     flex: 1;
     font-size: 1em;
+    line-height: 1.4;
+}
+
+.grocery-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
 }
 
 .grocery-count-stepper {
@@ -1958,5 +1966,45 @@ button {
 
     .grocery-store-tabs {
         flex-basis: 100%;
+    }
+
+    /* Two-row item layout: text gets the full card width, controls
+       drop to a second row underneath (instead of squeezing the text
+       into a narrow column next to the stepper/buttons). */
+    .grocery-item {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px 12px;
+        align-items: center;
+    }
+
+    .grocery-item-actions {
+        grid-column: 2;
+        width: 100%;
+    }
+
+    .grocery-item-actions .grocery-remove-btn {
+        margin-left: auto;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+    }
+
+    .grocery-count-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .grocery-count-value {
+        line-height: 32px;
+    }
+
+    .grocery-shop-btn {
+        width: 30px;
+        height: 30px;
     }
 }
