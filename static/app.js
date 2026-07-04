@@ -1250,13 +1250,15 @@ function renderGroceryList() {
                     <input type="checkbox" class="grocery-checkbox" ${item.checked ? 'checked' : ''}
                         onchange="toggleGroceryItem(${item.id})">
                     <span class="grocery-item-text">${escapeHtml(_scaleIngredient(item.text, item.count || 1))}</span>
-                    <div class="grocery-count-stepper">
-                        <button class="grocery-count-btn" onclick="changeGroceryItemCount(${item.id}, -1)">−</button>
-                        <span class="grocery-count-value">${item.count || 1}</span>
-                        <button class="grocery-count-btn" onclick="changeGroceryItemCount(${item.id}, 1)">+</button>
+                    <div class="grocery-item-actions">
+                        <div class="grocery-count-stepper">
+                            <button class="grocery-count-btn" onclick="changeGroceryItemCount(${item.id}, -1)">−</button>
+                            <span class="grocery-count-value">${item.count || 1}</span>
+                            <button class="grocery-count-btn" onclick="changeGroceryItemCount(${item.id}, 1)">+</button>
+                        </div>
+                        <button class="grocery-shop-btn" onclick="shopItemOnStore(${item.id})" title="Find on store">🔍</button>
+                        <button class="grocery-remove-btn" onclick="removeGroceryItem(${item.id})" title="Remove">✕</button>
                     </div>
-                    <button class="grocery-shop-btn" onclick="shopItemOnStore(${item.id})" title="Find on store">🔍</button>
-                    <button class="grocery-remove-btn" onclick="removeGroceryItem(${item.id})" title="Remove">✕</button>
                 </div>
             `).join('')}
         </div>
