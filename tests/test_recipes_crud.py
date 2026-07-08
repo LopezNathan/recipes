@@ -9,7 +9,7 @@ def test_create_recipe(client):
         "recipeInstructions": "Cook pasta, fry bacon, mix with eggs",
         "prepTime": "PT10M",
         "cookTime": "PT20M",
-        "recipeCategory": ["main"]
+        "recipeCategory": ["main"],
     }
 
     response = client.post("/recipes", json=recipe_data)

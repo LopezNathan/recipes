@@ -1,9 +1,7 @@
 """Helpers for converting recipe times to ISO 8601 durations."""
 
-from typing import Optional
 
-
-def minutes_to_duration(minutes) -> Optional[str]:
+def minutes_to_duration(minutes) -> str | None:
     """Convert a number of minutes to an ISO 8601 duration like 'PT1H30M'."""
     if minutes is None:
         return None

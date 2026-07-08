@@ -2,20 +2,18 @@
 
 import json
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
-from typing import List, Optional, Tuple
+from datetime import UTC, datetime
 
 from app.models import Recipe, RecipeCreate, RecipeUpdate
 
 
 class RecipeDatabase(ABC):
-
     @abstractmethod
     async def create(self, recipe: RecipeCreate) -> Recipe:
         pass
 
     @abstractmethod
-    async def get(self, recipe_id: int) -> Optional[Recipe]:
+    async def get(self, recipe_id: int) -> Recipe | None:
         pass
 
     @abstractmethod
@@ -23,26 +21,28 @@ class RecipeDatabase(ABC):
         self,
         skip: int = 0,
         limit: int = 100,
-        search: Optional[str] = None,
-        ingredient: Optional[str] = None,
-        category: Optional[str] = None,
-        cuisine: Optional[str] = None,
-        keyword: Optional[str] = None,
+        search: str | None = None,
+        ingredient: str | None = None,
+        category: str | None = None,
+        cuisine: str | None = None,
+        keyword: str | None = None,
         sort_by: str = "date_published",
-    ) -> Tuple[List[Recipe], int]:
+    ) -> tuple[list[Recipe], int]:
         pass
 
     @abstractmethod
     async def search(
         self,
         query: str,
-        search_fields: Optional[List[str]] = None,
+        search_fields: list[str] | None = None,
         max_results: int = 10,
-    ) -> List[Recipe]:
+    ) -> list[Recipe]:
         pass
 
     @abstractmethod
-    async def update(self, recipe_id: int, recipe_update: RecipeUpdate) -> Optional[Recipe]:
+    async def update(
+        self, recipe_id: int, recipe_update: RecipeUpdate
+    ) -> Recipe | None:
         pass
 
     @abstractmethod
@@ -50,15 +50,15 @@ class RecipeDatabase(ABC):
         pass
 
     @abstractmethod
-    async def get_categories(self) -> List[str]:
+    async def get_categories(self) -> list[str]:
         pass
 
     @abstractmethod
-    async def get_cuisines(self) -> List[str]:
+    async def get_cuisines(self) -> list[str]:
         pass
 
     @abstractmethod
-    async def get_keywords(self) -> List[str]:
+    async def get_keywords(self) -> list[str]:
         pass
 
 
@@ -75,8 +75,12 @@ def _to_recipe(row) -> Recipe:
         prepTime=row["prep_time"],
         cookTime=row["cook_time"],
         recipeYield=row["recipe_yield"],
-        recipeCategory=_load_json(row["recipe_category"]) if row["recipe_category"] else None,
-        recipeCuisine=_load_json(row["recipe_cuisine"]) if row["recipe_cuisine"] else None,
+        recipeCategory=_load_json(row["recipe_category"])
+        if row["recipe_category"]
+        else None,
+        recipeCuisine=_load_json(row["recipe_cuisine"])
+        if row["recipe_cuisine"]
+        else None,
         keywords=_load_json(row["keywords"]) if row["keywords"] else None,
         image=row["image"],
         url=row["url"],
@@ -86,7 +90,6 @@ def _to_recipe(row) -> Recipe:
 
 
 class PostgresRecipeDatabase(RecipeDatabase):
-
     def __init__(self, conn):
         self.conn = conn
 
@@ -107,15 +110,19 @@ class PostgresRecipeDatabase(RecipeDatabase):
             recipe.prepTime,
             recipe.cookTime,
             recipe.recipeYield,
-            json.dumps(recipe.recipeCategory) if recipe.recipeCategory is not None else None,
-            json.dumps(recipe.recipeCuisine) if recipe.recipeCuisine is not None else None,
+            json.dumps(recipe.recipeCategory)
+            if recipe.recipeCategory is not None
+            else None,
+            json.dumps(recipe.recipeCuisine)
+            if recipe.recipeCuisine is not None
+            else None,
             json.dumps(recipe.keywords) if recipe.keywords is not None else None,
             recipe.image,
             recipe.url,
         )
         return _to_recipe(row)
 
-    async def get(self, recipe_id: int) -> Optional[Recipe]:
+    async def get(self, recipe_id: int) -> Recipe | None:
         row = await self.conn.fetchrow("SELECT * FROM recipes WHERE id = $1", recipe_id)
         return _to_recipe(row) if row else None
 
@@ -123,19 +130,21 @@ class PostgresRecipeDatabase(RecipeDatabase):
         self,
         skip: int = 0,
         limit: int = 100,
-        search: Optional[str] = None,
-        ingredient: Optional[str] = None,
-        category: Optional[str] = None,
-        cuisine: Optional[str] = None,
-        keyword: Optional[str] = None,
+        search: str | None = None,
+        ingredient: str | None = None,
+        category: str | None = None,
+        cuisine: str | None = None,
+        keyword: str | None = None,
         sort_by: str = "date_published",
-    ) -> Tuple[List[Recipe], int]:
+    ) -> tuple[list[Recipe], int]:
         conditions: list[str] = []
         params: list = []
 
         if search:
             params.append(f"%{search}%")
-            conditions.append(f"(name ILIKE ${len(params)} OR description ILIKE ${len(params)})")
+            conditions.append(
+                f"(name ILIKE ${len(params)} OR description ILIKE ${len(params)})"
+            )
 
         if ingredient:
             params.append(f"%{ingredient}%")
@@ -161,9 +170,15 @@ class PostgresRecipeDatabase(RecipeDatabase):
 
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
 
-        total = await self.conn.fetchval(f"SELECT COUNT(*) FROM recipes {where}", *params)
+        total = await self.conn.fetchval(
+            f"SELECT COUNT(*) FROM recipes {where}", *params
+        )
 
-        order = "ORDER BY date_published DESC" if sort_by == "date_published" else "ORDER BY name ASC"
+        order = (
+            "ORDER BY date_published DESC"
+            if sort_by == "date_published"
+            else "ORDER BY name ASC"
+        )
         params.append(limit)
         params.append(skip)
         rows = await self.conn.fetch(
@@ -176,14 +191,19 @@ class PostgresRecipeDatabase(RecipeDatabase):
     async def search(
         self,
         query: str,
-        search_fields: Optional[List[str]] = None,
+        search_fields: list[str] | None = None,
         max_results: int = 10,
-    ) -> List[Recipe]:
+    ) -> list[Recipe]:
         if not search_fields:
             search_fields = ["name", "description"]
 
         # Map schema.org field names to DB column names
-        col_map = {"name": "name", "title": "name", "description": "description", "recipeIngredient": "recipe_ingredient"}
+        col_map = {
+            "name": "name",
+            "title": "name",
+            "description": "description",
+            "recipeIngredient": "recipe_ingredient",
+        }
 
         conditions = []
         for field in search_fields:
@@ -204,7 +224,9 @@ class PostgresRecipeDatabase(RecipeDatabase):
         )
         return [_to_recipe(r) for r in rows]
 
-    async def update(self, recipe_id: int, recipe_update: RecipeUpdate) -> Optional[Recipe]:
+    async def update(
+        self, recipe_id: int, recipe_update: RecipeUpdate
+    ) -> Recipe | None:
         update_data = recipe_update.model_dump(exclude_unset=True)
         if not update_data:
             return await self.get(recipe_id)
@@ -224,7 +246,12 @@ class PostgresRecipeDatabase(RecipeDatabase):
             "image": "image",
             "url": "url",
         }
-        jsonb_cols = {"recipe_ingredient", "recipe_category", "recipe_cuisine", "keywords"}
+        jsonb_cols = {
+            "recipe_ingredient",
+            "recipe_category",
+            "recipe_cuisine",
+            "keywords",
+        }
 
         set_parts: list[str] = []
         params: list = []
@@ -238,7 +265,7 @@ class PostgresRecipeDatabase(RecipeDatabase):
                 params.append(value)
                 set_parts.append(f"{col} = ${len(params)}")
 
-        params.append(datetime.now(timezone.utc))
+        params.append(datetime.now(UTC))
         set_parts.append(f"date_modified = ${len(params)}")
 
         params.append(recipe_id)
@@ -252,7 +279,7 @@ class PostgresRecipeDatabase(RecipeDatabase):
         result = await self.conn.execute("DELETE FROM recipes WHERE id = $1", recipe_id)
         return result != "DELETE 0"
 
-    async def get_categories(self) -> List[str]:
+    async def get_categories(self) -> list[str]:
         rows = await self.conn.fetch(
             """
             SELECT DISTINCT jsonb_array_elements_text(recipe_category) AS category
@@ -263,7 +290,7 @@ class PostgresRecipeDatabase(RecipeDatabase):
         )
         return [row["category"] for row in rows]
 
-    async def get_cuisines(self) -> List[str]:
+    async def get_cuisines(self) -> list[str]:
         rows = await self.conn.fetch(
             """
             SELECT DISTINCT jsonb_array_elements_text(recipe_cuisine) AS cuisine
@@ -274,7 +301,7 @@ class PostgresRecipeDatabase(RecipeDatabase):
         )
         return [row["cuisine"] for row in rows]
 
-    async def get_keywords(self) -> List[str]:
+    async def get_keywords(self) -> list[str]:
         rows = await self.conn.fetch(
             """
             SELECT DISTINCT jsonb_array_elements_text(keywords) AS keyword

@@ -2,22 +2,29 @@
 
 import asyncio
 import hashlib
+from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Depends, Query
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
 
-from app.models import Recipe, RecipeCreate, RecipeUpdate, RecipeListResponse, SearchRequest, RecipeImportRequest, RecipePasteRequest
-from app.database import init_db, close_db, get_pool
+from app.database import close_db, get_pool, init_db
 from app.db import PostgresRecipeDatabase
-from app.scraper import scrape_recipe
-from app.recipe_parser import parse_recipe_content
 from app.image_utils import validate_image_url
+from app.models import (
+    Recipe,
+    RecipeCreate,
+    RecipeImportRequest,
+    RecipeListResponse,
+    RecipePasteRequest,
+    RecipeUpdate,
+    SearchRequest,
+)
+from app.recipe_parser import parse_recipe_content
+from app.scraper import scrape_recipe
 from app.url_safety import is_public_http_url
-
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -29,6 +36,7 @@ def _compute_static_version() -> str:
         if p.is_file():
             h.update(p.read_bytes())
     return h.hexdigest()[:8]
+
 
 STATIC_VERSION = _compute_static_version()
 
@@ -47,7 +55,7 @@ public_app = FastAPI(
     title="Recipe API - Public (Read-Only)",
     version="1.0.0",
     description="Public read-only recipe API. No authentication required.",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Enable CORS for public API: read-only access from any origin, no credentials
@@ -57,7 +65,9 @@ public_app.add_middleware(
     allow_methods=["GET", "HEAD", "OPTIONS"],
     allow_headers=["*"],
 )
-public_app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static-public")
+public_app.mount(
+    "/static", StaticFiles(directory=BASE_DIR / "static"), name="static-public"
+)
 
 
 # ============================================================================
@@ -67,12 +77,14 @@ private_app = FastAPI(
     title="Recipe API - Private (Read/Write)",
     version="1.0.0",
     description="Private read/write recipe API. Access via Cloudflare tunnel only.",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # No CORS middleware on the private API: its frontend is served same-origin,
 # so cross-origin browser access to the write endpoints is deliberately not enabled.
-private_app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static-private")
+private_app.mount(
+    "/static", StaticFiles(directory=BASE_DIR / "static"), name="static-private"
+)
 
 # Keep 'app' as alias for backward compatibility with testing
 app = private_app
@@ -89,6 +101,7 @@ async def get_recipe_db() -> PostgresRecipeDatabase:
 # SHARED READ-ONLY ROUTES (on both public_app and private_app)
 # ============================================================================
 
+
 def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
     """Register read-only routes on the given FastAPI app."""
 
@@ -99,8 +112,12 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
     @fastapi_app.get("/")
     async def root():
         html = (BASE_DIR / "index.html").read_text(encoding="utf-8")
-        html = html.replace('href="/static/style.css"', f'href="/static/style.css?v={STATIC_VERSION}"')
-        html = html.replace('src="/static/app.js"', f'src="/static/app.js?v={STATIC_VERSION}"')
+        html = html.replace(
+            'href="/static/style.css"', f'href="/static/style.css?v={STATIC_VERSION}"'
+        )
+        html = html.replace(
+            'src="/static/app.js"', f'src="/static/app.js?v={STATIC_VERSION}"'
+        )
         return HTMLResponse(content=html)
 
     @fastapi_app.get("/recipes", response_model=RecipeListResponse)
@@ -138,7 +155,7 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
             keyword=keyword,
             sort_by=sort_by,
         )
-        
+
         return {
             "recipes": recipes,
             "total": total,
@@ -162,7 +179,9 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
         return await db.get_keywords()
 
     @fastapi_app.get("/recipes/{recipe_id}", response_model=Recipe)
-    async def get_recipe(recipe_id: int, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
+    async def get_recipe(
+        recipe_id: int, db: PostgresRecipeDatabase = Depends(get_recipe_db)
+    ):
         """Get a specific recipe by ID."""
         recipe = await db.get(recipe_id)
         if not recipe:
@@ -176,7 +195,7 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
     ):
         """
         Advanced search across recipes.
-        
+
         Body parameters:
         - query: Search query string
         - search_fields: Fields to search in (default: title, description)
@@ -198,8 +217,11 @@ setup_read_only_routes(private_app, mode="private")
 # WRITE-ONLY ROUTES (on private_app only)
 # ============================================================================
 
+
 @private_app.post("/recipes", response_model=Recipe, status_code=201)
-async def create_recipe(recipe: RecipeCreate, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
+async def create_recipe(
+    recipe: RecipeCreate, db: PostgresRecipeDatabase = Depends(get_recipe_db)
+):
     """Create a new recipe."""
     return await db.create(recipe)
 
@@ -218,7 +240,9 @@ async def update_recipe(
 
 
 @private_app.delete("/recipes/{recipe_id}", status_code=204)
-async def delete_recipe(recipe_id: int, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
+async def delete_recipe(
+    recipe_id: int, db: PostgresRecipeDatabase = Depends(get_recipe_db)
+):
     """Delete a recipe."""
     success = await db.delete(recipe_id)
     if not success:
@@ -233,7 +257,7 @@ async def import_recipe(
 ):
     """
     Import a recipe from a URL.
-    
+
     Supports 900+ recipe websites including:
     - AllRecipes
     - Food Network
@@ -241,10 +265,10 @@ async def import_recipe(
     - Serious Eats
     - Bon Appétit
     - And many more!
-    
+
     Body parameters:
     - url: The URL of the recipe to import
-    
+
     Example:
     ```
     POST /import
@@ -256,8 +280,7 @@ async def import_recipe(
     # is_public_http_url does DNS resolution — keep it off the event loop
     if not await asyncio.to_thread(is_public_http_url, import_request.url):
         raise HTTPException(
-            status_code=400,
-            detail="URL must be a public http(s) address."
+            status_code=400, detail="URL must be a public http(s) address."
         )
 
     # Scrape recipe from URL
@@ -266,7 +289,7 @@ async def import_recipe(
     if not recipe_data:
         raise HTTPException(
             status_code=400,
-            detail="Failed to scrape recipe from URL. Please ensure the URL is a valid recipe page."
+            detail="Failed to scrape recipe from URL. Please ensure the URL is a valid recipe page.",
         )
 
     recipe_data.image = await validate_image_url(recipe_data.image)
@@ -276,7 +299,10 @@ async def import_recipe(
 
 
 @private_app.post("/paste", response_model=Recipe, status_code=201)
-async def paste_recipe(paste_request: RecipePasteRequest, db: PostgresRecipeDatabase = Depends(get_recipe_db)):
+async def paste_recipe(
+    paste_request: RecipePasteRequest,
+    db: PostgresRecipeDatabase = Depends(get_recipe_db),
+):
     """
     Paste in an AI-generated recipe in JSON or markdown format.
 
@@ -322,7 +348,7 @@ async def paste_recipe(paste_request: RecipePasteRequest, db: PostgresRecipeData
     if not recipe_data:
         raise HTTPException(
             status_code=400,
-            detail="Failed to parse recipe. Please check the format and try again."
+            detail="Failed to parse recipe. Please check the format and try again.",
         )
 
     recipe_data.image = await validate_image_url(recipe_data.image)

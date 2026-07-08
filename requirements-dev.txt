@@ -1,0 +1,2 @@
+# Tooling not needed at runtime (kept out of the Docker image).
+ruff==0.15.20
