@@ -37,7 +37,10 @@ def test_public_app_rejects_delete(public_client):
 
 def test_public_app_hides_import_route(public_client):
     # /import only exists on private_app → the path is unknown here
-    assert public_client.post("/import", json={"url": "https://example.com"}).status_code == 404
+    assert (
+        public_client.post("/import", json={"url": "https://example.com"}).status_code
+        == 404
+    )
 
 
 def test_public_app_hides_paste_route(public_client):

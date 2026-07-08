@@ -1,0 +1,19 @@
+[tool.ruff]
+# The app runs on 3.14, but ruff 0.15.20's formatter has a bug under
+# target-version = "py314": it strips the required parentheses from
+# `except (A, B):`, producing invalid syntax. py313 formats correctly and
+# still enables every lint rule we use (all target 3.10-3.13 features).
+# Revisit bumping to py314 once ruff ships a fix.
+target-version = "py313"
+
+[tool.ruff.lint]
+# E/W: pycodestyle, F: pyflakes, I: isort, B: bugbear, UP: pyupgrade
+select = ["E", "F", "I", "W", "B", "UP"]
+# Line length is enforced by the formatter, which won't split long strings;
+# flagging E501 on top of that is just noise.
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI uses callables in argument defaults by design (Depends/Query/...),
+# which would otherwise trip B008.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]

@@ -1,16 +1,19 @@
 """Shared test fixtures."""
 
 import asyncio
-import asyncpg
 import os
+
+import asyncpg
 import pytest
 from fastapi.testclient import TestClient
 
-import main
 import app.database as db_module
+import main
 from app.database import CREATE_TABLE_SQL
 
-TEST_DATABASE_URL = os.getenv("TEST_DATABASE_URL", "postgresql://localhost/recipes_test")
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL", "postgresql://localhost/recipes_test"
+)
 
 
 async def _reset_table():
@@ -26,6 +29,7 @@ async def _reset_table():
 def mock_validate_image_url(monkeypatch):
     async def passthrough(url, timeout=4.0):
         return url
+
     monkeypatch.setattr("main.validate_image_url", passthrough)
 
 

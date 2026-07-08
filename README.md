@@ -40,6 +40,15 @@ make test      # start Postgres + run test suite
 make test-v    # verbose output
 ```
 
+### Linting & Formatting
+
+[Ruff](https://docs.astral.sh/ruff/) handles both linting and formatting (config in `pyproject.toml`). It's installed via `requirements-dev.txt` (kept out of the Docker image) and pulled in by `make install`.
+
+```bash
+make lint      # ruff check + ruff format --check (what CI runs)
+make format    # auto-fix lint issues and reformat in place
+```
+
 ### Other Commands
 
 ```bash
@@ -109,7 +118,11 @@ docker-compose.yml          # Production containers
 
 ### CI/CD
 
-The workflow (`.github/workflows/deploy.yml`) runs on pushes to `main` and on `v*` tags:
+Pull requests to `main` run `.github/workflows/ci.yml`, which has two jobs: **lint** (`ruff check` + `ruff format --check`) and **test** (pytest against a throwaway Postgres service). Both must pass to merge.
+
+[Dependabot](.github/dependabot.yml) opens weekly PRs for Python (`pip`) and GitHub Actions dependency updates. Runtime dependencies are pinned to exact versions in `requirements.txt` for reproducible builds; dev tooling is pinned in `requirements-dev.txt`.
+
+The deploy workflow (`.github/workflows/deploy.yml`) runs on pushes to `main` and on `v*` tags:
 1. Builds the Docker image and pushes it to GHCR (`ghcr.io/lopeznathan/recipes`). Every run updates `:latest`; a `v*` tag push also publishes `:<version>` (the tag with the leading `v` stripped).
 2. SSHes into the server and runs `docker compose pull && docker compose up -d`
 3. On a `v*` tag, creates a GitHub release with auto-generated notes.

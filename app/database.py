@@ -1,9 +1,9 @@
 """PostgreSQL database setup with asyncpg."""
 
-import asyncpg
 import os
 import ssl
-from typing import Optional
+
+import asyncpg
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,7 +15,7 @@ _raw_url = os.getenv("DATABASE_URL", "postgresql://localhost/recipes")
 _use_ssl = "sslmode=" in _raw_url
 DATABASE_URL = _raw_url.split("?")[0] if "?" in _raw_url else _raw_url
 
-_pool: Optional[asyncpg.Pool] = None
+_pool: asyncpg.Pool | None = None
 
 CREATE_TABLE_SQL = """
     CREATE TABLE IF NOT EXISTS recipes (

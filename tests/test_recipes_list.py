@@ -17,7 +17,7 @@ def test_list_recipes_with_data(client):
         "description": "Delicious pasta",
         "recipeIngredient": ["400g pasta"],
         "recipeInstructions": "Boil and serve",
-        "recipeCategory": ["main"]
+        "recipeCategory": ["main"],
     }
     create_resp = client.post("/recipes", json=recipe_data)
     assert create_resp.status_code == 201

@@ -2,6 +2,7 @@ PYTHON  = venv/bin/python
 PIP     = venv/bin/pip
 PYTEST  = venv/bin/pytest
 UVICORN = venv/bin/uvicorn
+RUFF    = venv/bin/ruff
 
 DEPLOY_HOST ?= ubuntu@$(SERVER_IP)
 DEPLOY_DIR   = /opt/recipes
@@ -12,13 +13,13 @@ export
 
 BUMP ?= patch
 
-.PHONY: venv install up down test test-v dev reset logs deploy release
+.PHONY: venv install up down test test-v lint format dev reset logs deploy release
 
 venv:
 	python3 -m venv venv
 
 install: venv
-	$(PIP) install -r requirements.txt
+	$(PIP) install -r requirements.txt -r requirements-dev.txt
 
 up:
 	docker compose -f docker-compose.local.yml up -d
@@ -32,6 +33,14 @@ test: up
 
 test-v: up
 	$(PYTEST) tests/ -v
+
+lint:
+	$(RUFF) check .
+	$(RUFF) format --check .
+
+format:
+	$(RUFF) check --fix .
+	$(RUFF) format .
 
 dev: up
 	$(UVICORN) main:app --reload
