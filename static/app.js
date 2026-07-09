@@ -1057,10 +1057,18 @@ function showPage(pageName) {
 // Grocery List
 // ============================================================================
 
+// Shop links go through our own /shop redirect instead of linking to the
+// store directly: store apps (e.g. FreshDirect) intercept direct store URLs
+// as universal links but drop the search term, while a same-origin link
+// followed by a server redirect stays in the browser, where search works.
 const GROCERY_STORES = [
-    { id: 'freshdirect', name: 'FreshDirect', searchUrl: q => `https://www.freshdirect.com/search?search=${encodeURIComponent(q)}` },
-    { id: 'heb',         name: 'HEB',         searchUrl: q => `https://www.heb.com/search?q=${encodeURIComponent(q)}` },
+    { id: 'freshdirect', name: 'FreshDirect' },
+    { id: 'heb',         name: 'HEB' },
 ];
+
+function _storeSearchUrl(store, q) {
+    return `${API_URL}/shop?store=${store.id}&q=${encodeURIComponent(q)}`;
+}
 
 function _getSelectedStore() {
     const id = localStorage.getItem('groceryStore') || GROCERY_STORES[0].id;
@@ -1079,27 +1087,11 @@ function _ingredientSearchText(text) {
     return stripped || text.trim();
 }
 
-// Store apps that intercept these links (universal links) don't always parse
-// the search term out of the URL, so copy it to the clipboard as a fallback —
-// the user can paste it into the app's search box if it opens empty.
-function _copySearchTerm(term) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(term).catch(() => {});
-    }
-}
-
 function shopItemOnStore(itemId) {
     const item = _loadGroceryList().find(i => i.id === itemId);
     if (!item) return;
     const store = _getSelectedStore();
-    const term = _ingredientSearchText(item.text);
-    _copySearchTerm(term);
-    window.open(store.searchUrl(term), '_blank');
-}
-
-function copyShopTerm(itemId) {
-    const item = _loadGroceryList().find(i => i.id === itemId);
-    if (item) _copySearchTerm(_ingredientSearchText(item.text));
+    window.open(_storeSearchUrl(store, _ingredientSearchText(item.text)), '_blank');
 }
 
 function selectGroceryStore(id) {
@@ -1130,13 +1122,13 @@ function renderShopLinks() {
         return;
     }
     panel.innerHTML = unchecked.map(item => {
-        const url = store.searchUrl(_ingredientSearchText(item.text));
+        const url = _storeSearchUrl(store, _ingredientSearchText(item.text));
         const display = _scaleIngredient(item.text, item.count || 1);
-        return `<a class="shop-link-item" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" onclick="copyShopTerm(${item.id})">
+        return `<a class="shop-link-item" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
             <span class="shop-link-name">${escapeHtml(display)}</span>
             <span class="shop-link-arrow">${store.name} →</span>
         </a>`;
-    }).join('') + '<p class="shop-links-hint">Tapping a link also copies the item name — if the store app opens without searching, paste it into the app\'s search box.</p>';
+    }).join('');
 }
 
 function _loadGroceryList() {

@@ -4,10 +4,11 @@ import asyncio
 import hashlib
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.database import close_db, get_pool, init_db
@@ -39,6 +40,17 @@ def _compute_static_version() -> str:
 
 
 STATIC_VERSION = _compute_static_version()
+
+# Grocery-store search URL templates for the /shop redirect. Shop links go
+# through our own domain so iOS never treats them as universal links: store
+# apps (e.g. FreshDirect) intercept direct store URLs but drop the search
+# term, while a same-origin link followed by a server-side redirect always
+# stays in the browser, where the search works. Fixed templates keyed by
+# store id (rather than a pass-through URL) avoid an open redirect.
+SHOP_SEARCH_URLS = {
+    "freshdirect": "https://www.freshdirect.com/search?search={q}",
+    "heb": "https://www.heb.com/search?q={q}",
+}
 
 
 @asynccontextmanager
@@ -108,6 +120,16 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
     @fastapi_app.get("/app-mode")
     async def app_mode():
         return {"mode": mode}
+
+    @fastapi_app.get("/shop")
+    async def shop_redirect(
+        store: str, q: str = Query(..., min_length=1, max_length=200)
+    ):
+        """Redirect to a grocery store's search page for the given term."""
+        template = SHOP_SEARCH_URLS.get(store)
+        if not template:
+            raise HTTPException(status_code=404, detail="Unknown store")
+        return RedirectResponse(url=template.format(q=quote(q)), status_code=302)
 
     @fastapi_app.get("/")
     async def root():
