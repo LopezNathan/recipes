@@ -12,7 +12,7 @@ Personal recipe management app. FastAPI backend, PostgreSQL (Neon), deployed on 
 - Paste AI-generated recipes in JSON or markdown format
 - Intelligent ingredient parsing — separates quantity from name, handles unicode fractions
 - Cooking Mode — step-by-step view with collapsible ingredients, multi-timer, and Wake Lock
-- Grocery list — add individual ingredients or full recipes, count steppers, custom items, and online shopping links (FreshDirect, HEB); on mobile, item controls move to a second row so long ingredient names stay readable
+- Grocery list — add individual ingredients or full recipes, count steppers, custom items, and online shopping links (FreshDirect, HEB); tapping a shop link also copies the item name to the clipboard as a fallback for store apps that open without running the search; on mobile, item controls move to a second row so long ingredient names stay readable
 - Dark/light mode toggle
 - Mobile-responsive with PWA meta tags and Apple Touch Icon for home screen install
 - Public (read-only) and private (read/write) API endpoints
