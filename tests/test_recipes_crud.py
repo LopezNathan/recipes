@@ -136,3 +136,74 @@ def test_delete_recipe(client):
 def test_delete_nonexistent_recipe(client):
     response = client.delete("/recipes/999")
     assert response.status_code == 404
+
+
+def test_create_recipe_with_rating(client):
+    recipe_data = {
+        "name": "Rated Recipe",
+        "recipeIngredient": ["ingredient"],
+        "recipeInstructions": "Cook",
+        "rating": 4,
+    }
+    response = client.post("/recipes", json=recipe_data)
+    assert response.status_code == 201
+    assert response.json()["rating"] == 4
+
+
+def test_create_recipe_rating_defaults_none(client):
+    recipe_data = {
+        "name": "Unrated",
+        "recipeIngredient": ["ingredient"],
+        "recipeInstructions": "Cook",
+    }
+    response = client.post("/recipes", json=recipe_data)
+    assert response.status_code == 201
+    assert response.json()["rating"] is None
+
+
+def test_create_recipe_rating_out_of_range(client):
+    for bad in (0, 6, -1):
+        recipe_data = {
+            "name": "Bad Rating",
+            "recipeIngredient": ["ingredient"],
+            "recipeInstructions": "Cook",
+            "rating": bad,
+        }
+        response = client.post("/recipes", json=recipe_data)
+        assert response.status_code == 422
+
+
+def test_update_recipe_rating(client):
+    create_resp = client.post(
+        "/recipes",
+        json={
+            "name": "R",
+            "recipeIngredient": ["ing"],
+            "recipeInstructions": "Cook",
+        },
+    )
+    recipe_id = create_resp.json()["id"]
+
+    response = client.put(f"/recipes/{recipe_id}", json={"rating": 5})
+    assert response.status_code == 200
+    assert response.json()["rating"] == 5
+
+    # Explicit null clears the rating
+    response = client.put(f"/recipes/{recipe_id}", json={"rating": None})
+    assert response.status_code == 200
+    assert response.json()["rating"] is None
+
+
+def test_update_recipe_rating_out_of_range(client):
+    create_resp = client.post(
+        "/recipes",
+        json={
+            "name": "R",
+            "recipeIngredient": ["ing"],
+            "recipeInstructions": "Cook",
+        },
+    )
+    recipe_id = create_resp.json()["id"]
+
+    response = client.put(f"/recipes/{recipe_id}", json={"rating": 9})
+    assert response.status_code == 422

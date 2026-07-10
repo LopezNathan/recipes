@@ -84,6 +84,7 @@ def _to_recipe(row) -> Recipe:
         keywords=_load_json(row["keywords"]) if row["keywords"] else None,
         image=row["image"],
         url=row["url"],
+        rating=row["rating"],
         datePublished=row["date_published"],
         dateModified=row["date_modified"],
     )
@@ -99,8 +100,8 @@ class PostgresRecipeDatabase(RecipeDatabase):
             INSERT INTO recipes
                 (name, description, recipe_ingredient, recipe_instructions,
                  prep_time, cook_time, recipe_yield, recipe_category,
-                 recipe_cuisine, keywords, image, url)
-            VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12)
+                 recipe_cuisine, keywords, image, url, rating)
+            VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13)
             RETURNING *
             """,
             recipe.name,
@@ -119,6 +120,7 @@ class PostgresRecipeDatabase(RecipeDatabase):
             json.dumps(recipe.keywords) if recipe.keywords is not None else None,
             recipe.image,
             recipe.url,
+            recipe.rating,
         )
         return _to_recipe(row)
 
@@ -245,6 +247,7 @@ class PostgresRecipeDatabase(RecipeDatabase):
             "keywords": "keywords",
             "image": "image",
             "url": "url",
+            "rating": "rating",
         }
         jsonb_cols = {
             "recipe_ingredient",

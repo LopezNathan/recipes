@@ -13,6 +13,64 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+// ---- Star ratings (1-5) ----
+
+// Read-only stars for cards and the public detail view.
+function starsDisplayHtml(rating) {
+    const r = Number(rating) || 0;
+    let out = `<span class="stars-display" role="img" aria-label="${r} out of 5 stars">`;
+    for (let i = 1; i <= 5; i++) {
+        out += `<span class="star${i <= r ? ' star--filled' : ''}">★</span>`;
+    }
+    return out + '</span>';
+}
+
+function _paintStars(el, val) {
+    el.querySelectorAll('button').forEach(b =>
+        b.classList.toggle('star-input-star--filled', parseInt(b.dataset.value) <= val));
+}
+
+// Build 5 clickable stars into `el`. Current value is tracked on el.dataset.rating;
+// onPick(value) fires when a star is clicked.
+function _buildStars(el, current, onPick) {
+    el.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'star-input-star';
+        btn.textContent = '★';
+        btn.dataset.value = i;
+        btn.setAttribute('aria-label', `${i} star${i > 1 ? 's' : ''}`);
+        btn.addEventListener('mouseenter', () => _paintStars(el, i));
+        btn.addEventListener('click', () => onPick(i));
+        el.appendChild(btn);
+    }
+    // onmouseleave (not addEventListener) so repeated builds don't stack listeners
+    el.onmouseleave = () => _paintStars(el, parseInt(el.dataset.rating) || 0);
+    el.dataset.rating = current || 0;
+    _paintStars(el, current || 0);
+}
+
+// Form star-input: click a star to set, click the same star again to clear.
+function initStarInput(el) {
+    if (!el || el._starInit) return;
+    el._starInit = true;
+    _buildStars(el, parseInt(el.dataset.rating) || 0, (v) => {
+        const cur = parseInt(el.dataset.rating) || 0;
+        setStarInput(el, cur === v ? 0 : v);
+    });
+}
+
+function setStarInput(el, value) {
+    el.dataset.rating = value || 0;
+    _paintStars(el, value || 0);
+}
+
+function getStarInput(el) {
+    const r = parseInt(el.dataset.rating) || 0;
+    return r >= 1 ? r : undefined;
+}
+
 async function acquireWakeLock() {
     if (!('wakeLock' in navigator)) return;
     try {
@@ -47,6 +105,8 @@ let LIMIT = 8;
 document.addEventListener('DOMContentLoaded', async () => {
     initThemeToggle();
     setupEventListeners();
+    initStarInput(document.getElementById('createRating'));
+    initStarInput(document.getElementById('editRating'));
     LIMIT = parseInt(document.getElementById('perPageSelect').value) || 8;
     await detectAppMode();
     await Promise.all([loadRecipes(), loadCategories(), loadCuisines(), loadKeywords()]);
@@ -190,7 +250,8 @@ async function handleCreateRecipe(e) {
         recipeCategory: document.getElementById('category').value
             ? document.getElementById('category').value.split(',').map(s => s.trim()).filter(Boolean)
             : undefined,
-        image: document.getElementById('imageUrl').value || undefined
+        image: document.getElementById('imageUrl').value || undefined,
+        rating: getStarInput(document.getElementById('createRating'))
     };
 
     try {
@@ -355,6 +416,8 @@ async function handleUpdateRecipe(e) {
         recipeCategory: parseTagInput('editCategory'),
         recipeCuisine: parseTagInput('editCuisine'),
         keywords: parseTagInput('editKeywords'),
+        // send null (not undefined) so clearing the stars persists as "no rating"
+        rating: getStarInput(document.getElementById('editRating')) ?? null,
     };
 
     try {
@@ -546,6 +609,7 @@ function renderRecipes(recipes) {
             ${img}
             <div class="recipe-card-body">
                 <div class="recipe-card-title">${escapeHtml(recipe.name)}</div>
+                ${recipe.rating ? `<div class="recipe-card-rating">${starsDisplayHtml(recipe.rating)}</div>` : ''}
                 ${metaParts.length ? `<div class="recipe-card-meta">${metaParts.join(' · ')}</div>` : ''}
                 ${isPrivate ? `<div class="recipe-card-actions" onclick="event.stopPropagation()">
                     <button class="btn-secondary" onclick="openEditModal(${recipe.id})">Edit</button>
@@ -590,6 +654,7 @@ async function openEditModal(recipeId) {
         document.getElementById('editCategory').value = (recipe.recipeCategory || []).join(', ');
         document.getElementById('editCuisine').value = (recipe.recipeCuisine || []).join(', ');
         document.getElementById('editKeywords').value = (recipe.keywords || []).join(', ');
+        setStarInput(document.getElementById('editRating'), recipe.rating || 0);
 
         const container = document.getElementById('editIngredientsContainer');
         container.innerHTML = '';
@@ -647,6 +712,7 @@ function resetForm() {
         </div>
     `;
     setupIngredientRemovalListeners();
+    setStarInput(document.getElementById('createRating'), 0);
 }
 
 function showAlert(message, type) {
@@ -810,6 +876,20 @@ async function openCookingMode(recipeId) {
         tagsEl.style.display = tags.length ? '' : 'none';
 
         _cookingRecipe = recipe;
+        renderCookingRating(recipe);
+
+        const sourceEl = document.getElementById('cookingSource');
+        if (recipe.url) {
+            let host = recipe.url;
+            try { host = new URL(recipe.url).hostname.replace(/^www\./, ''); } catch (_) {}
+            sourceEl.href = recipe.url;
+            document.getElementById('cookingSourceHost').textContent = host;
+            sourceEl.style.display = '';
+        } else {
+            sourceEl.removeAttribute('href');
+            sourceEl.style.display = 'none';
+        }
+
         _originalServings = recipe.recipeYield ? parseInt(recipe.recipeYield) : null;
         _currentServings = _originalServings;
 
@@ -817,14 +897,11 @@ async function openCookingMode(recipeId) {
         document.getElementById('cookingCookTime').textContent = recipe.cookTime ? formatDuration(recipe.cookTime) : '—';
 
         const servingsItem = document.getElementById('cookingServingsItem');
-        const cookingMeta = document.querySelector('.cooking-meta');
         if (_originalServings) {
             document.getElementById('cookingServings').textContent = _originalServings;
             servingsItem.style.display = '';
-            cookingMeta.classList.remove('two-items');
         } else {
             servingsItem.style.display = 'none';
-            cookingMeta.classList.add('two-items');
         }
 
         _renderIngredients(recipe, 1);
@@ -892,6 +969,44 @@ function closeCookingMode() {
     timerCounter = 0;
     history.replaceState(null, '', location.pathname + location.search);
     releaseWakeLock();
+}
+
+// Rating in the detail/cooking view: interactive (click to save) when the
+// private write API is available, otherwise a read-only display.
+function renderCookingRating(recipe) {
+    const el = document.getElementById('cookingRating');
+    const item = document.getElementById('cookingRatingItem');
+    const r = recipe.rating || 0;
+    if (isPrivate) {
+        // Always show the interactive control so an unrated recipe can be rated.
+        el.classList.add('cooking-rating--interactive');
+        _buildStars(el, r, (v) => setCookingRating(v === (recipe.rating || 0) ? null : v));
+        item.style.display = '';
+    } else {
+        // Read-only: only surface the rating when one exists.
+        el.classList.remove('cooking-rating--interactive');
+        el.onmouseleave = null;
+        el.innerHTML = r ? starsDisplayHtml(r) : '';
+        item.style.display = r ? '' : 'none';
+    }
+}
+
+async function setCookingRating(value) {
+    if (!_cookingRecipe) return;
+    try {
+        const response = await fetch(`${API_URL}/recipes/${_cookingRecipe.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rating: value })
+        });
+        if (!response.ok) throw new Error('Failed to save rating');
+        const updated = await response.json();
+        _cookingRecipe.rating = updated.rating;
+        renderCookingRating(_cookingRecipe);
+        loadRecipes();
+    } catch (error) {
+        showAlert('Error saving rating: ' + error.message, 'error');
+    }
 }
 
 // Timer Functions

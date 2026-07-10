@@ -27,6 +27,12 @@
 
             <img id="cookingImage" class="cooking-image" alt="Recipe">
 
+            <a id="cookingSource" class="cooking-source" target="_blank" rel="noopener noreferrer" style="display:none;">
+                <span class="cooking-source-label">Source:</span>
+                <span class="cooking-source-host" id="cookingSourceHost"></span>
+                <svg class="cooking-source-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+            </a>
+
             <div class="cooking-meta">
                 <div class="cooking-meta-item">
                     <div class="cooking-meta-item-label">Prep Time</div>
@@ -43,6 +49,10 @@
                         <span id="cookingServings"></span>
                         <button class="servings-btn" onclick="adjustServings(1)">+</button>
                     </div>
+                </div>
+                <div class="cooking-meta-item" id="cookingRatingItem" style="display:none;">
+                    <div class="cooking-meta-item-label">Rating</div>
+                    <div class="cooking-meta-item-value cooking-rating" id="cookingRating"></div>
                 </div>
             </div>
 
@@ -205,6 +215,11 @@
                         </div>
 
                         <div class="form-group">
+                            <label>Rating</label>
+                            <div class="star-input" id="createRating" data-rating="0"></div>
+                        </div>
+
+                        <div class="form-group">
                             <label for="imageUrl">Image URL</label>
                             <input type="url" id="imageUrl" placeholder="https://example.com/recipe-image.jpg">
                         </div>
@@ -307,6 +322,11 @@
                 <div class="form-group">
                     <label for="editSourceUrl">Source URL</label>
                     <input type="url" id="editSourceUrl" placeholder="https://...">
+                </div>
+
+                <div class="form-group">
+                    <label>Rating</label>
+                    <div class="star-input" id="editRating" data-rating="0"></div>
                 </div>
 
                 <div class="form-group">
