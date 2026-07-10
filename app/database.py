@@ -32,9 +32,13 @@ CREATE_TABLE_SQL = """
         keywords            JSONB,
         image               VARCHAR(500),
         url                 VARCHAR(500),
+        rating              SMALLINT CHECK (rating BETWEEN 1 AND 5),
         date_published      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         date_modified       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
+
+    -- No migration tool: add columns to already-existing tables idempotently.
+    ALTER TABLE recipes ADD COLUMN IF NOT EXISTS rating SMALLINT CHECK (rating BETWEEN 1 AND 5);
 
     -- The category/cuisine/keyword filters use jsonb_array_elements_text + lower(),
     -- which a default gin(recipe_category) index can't serve, so it was pure

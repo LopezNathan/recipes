@@ -16,6 +16,7 @@ class RecipeBase(BaseModel):
     keywords: list[str] | None = None
     image: str | None = None
     url: str | None = None
+    rating: int | None = Field(default=None, ge=1, le=5)  # personal 1-5 star rating
 
 
 class RecipeCreate(RecipeBase):
@@ -35,6 +36,7 @@ class RecipeUpdate(BaseModel):
     keywords: list[str] | None = None
     image: str | None = None
     url: str | None = None
+    rating: int | None = Field(default=None, ge=1, le=5)
 
 
 class Recipe(RecipeBase):

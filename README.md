@@ -8,6 +8,8 @@ Personal recipe management app. FastAPI backend, PostgreSQL (Neon), deployed on 
 - Search and filter by title, description, ingredients, category, cuisine, and keywords
 - Collapsible Filters panel — ingredient text search plus category, cuisine, keyword dropdowns
 - Recipe tags — category, cuisine, and keyword tags stored per recipe and shown in detail view
+- Star ratings — a personal 1–5 star rating per recipe, shown on recipe cards and settable inline in the detail view (click a star to save, click it again to clear) or via the create/edit forms
+- Source link — the original recipe URL is surfaced as a clickable "Source" link in the detail view
 - Import recipes from 900+ websites (AllRecipes, Serious Eats, Budget Bytes, etc.)
 - Paste AI-generated recipes in JSON or markdown format
 - Intelligent ingredient parsing — separates quantity from name, handles unicode fractions
@@ -75,6 +77,8 @@ Both `public_app` and `private_app` expose read routes. Write routes are private
 | POST | `/search` | public | Advanced search (`max_results` capped at 100) |
 
 `GET /recipes` validates pagination: `skip >= 0` and `1 <= limit <= 500` (out-of-range values return `422`). `POST /recipes`, `/import`, and `/paste` all return `201 Created`.
+
+Recipes carry an optional `rating` field — an integer from 1 to 5 (out-of-range values return `422`). Send `"rating": null` on a `PUT` to clear it. The original recipe `url` is returned by the read routes and rendered as a source link in the frontend.
 
 Interactive docs at `/docs` when running locally.
 
