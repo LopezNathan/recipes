@@ -68,6 +68,8 @@ Both `public_app` and `private_app` expose read routes. Write routes are private
 | GET | `/recipes` | public | List recipes (`search`, `ingredient`, `category`, `cuisine`, `keywords`, `skip`, `limit`, `sort_by`) |
 | GET | `/recipes/{id}` | public | Get a recipe |
 | GET | `/app-mode` | public | Returns `{"mode": "public"}` or `{"mode": "private"}` |
+| GET | `/health` | public | Liveness check — always `200 {"status": "ok"}`, touches no dependencies |
+| GET | `/health/ready` | public | Readiness check — `200 {"status": "ready"}` if the database is reachable, `503` otherwise |
 | GET | `/shop` | public | 302 redirect to a store's search page (`store`: `freshdirect` or `heb`, `q`: search term); unknown stores return `404` |
 | POST | `/recipes` | private | Create a recipe |
 | PUT | `/recipes/{id}` | private | Update a recipe |
