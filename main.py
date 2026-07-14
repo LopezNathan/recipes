@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import quote
@@ -103,7 +104,7 @@ app = private_app
 
 
 # Dependency to get database instance
-async def get_recipe_db() -> PostgresRecipeDatabase:
+async def get_recipe_db() -> AsyncGenerator[PostgresRecipeDatabase]:
     pool = await get_pool()
     async with pool.acquire() as conn:
         yield PostgresRecipeDatabase(conn)

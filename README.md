@@ -51,6 +51,14 @@ make lint      # ruff check + ruff format --check (what CI runs)
 make format    # auto-fix lint issues and reformat in place
 ```
 
+### Type Checking
+
+[mypy](https://mypy-lang.org/) type-checks `main.py`, `app/`, and `tests/` (config in `pyproject.toml`). Like Ruff, it's installed via `requirements-dev.txt`. The config starts lenient — untyped function signatures are allowed, but bodies of untyped functions are still checked (`check_untyped_defs`); the plan is to ratchet up strictness (e.g. `disallow_untyped_defs`) over time.
+
+```bash
+make typecheck  # mypy (what CI runs)
+```
+
 ### Other Commands
 
 ```bash
@@ -126,7 +134,7 @@ docker-compose.yml          # Production containers
 
 ### CI/CD
 
-Pull requests to `main` run `.github/workflows/ci.yml`, which has two jobs: **lint** (`ruff check` + `ruff format --check`) and **test** (pytest against a throwaway Postgres service). Both must pass to merge.
+Pull requests to `main` run `.github/workflows/ci.yml`, which has three jobs: **lint** (`ruff check` + `ruff format --check`), **typecheck** (`mypy`), and **test** (pytest against a throwaway Postgres service). All must pass to merge.
 
 [Dependabot](.github/dependabot.yml) opens weekly PRs for Python (`pip`) and GitHub Actions dependency updates. Runtime dependencies are pinned to exact versions in `requirements.txt` for reproducible builds; dev tooling is pinned in `requirements-dev.txt`.
 

@@ -1,3 +1,14 @@
+[tool.mypy]
+python_version = "3.14"
+files = ["main.py", "app", "tests"]
+# Lenient starting point: untyped function signatures are still allowed
+# (disallow_untyped_defs is the next step on the strictness ramp), but
+# bodies of untyped functions are checked rather than skipped.
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+
 [tool.ruff]
 # The app runs on 3.14, but ruff 0.15.20's formatter has a bug under
 # target-version = "py314": it strips the required parentheses from

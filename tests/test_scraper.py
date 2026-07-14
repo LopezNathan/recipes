@@ -59,6 +59,7 @@ async def test_scrape_recipe_joins_list_instructions(monkeypatch):
     monkeypatch.setattr(scraper_module, "scrape_me", lambda url: ListInstructions())
 
     recipe = await scrape_recipe("https://example.com/recipe")
+    assert recipe is not None
     assert recipe.recipeInstructions == "Step one\nStep two"
 
 
@@ -70,6 +71,7 @@ async def test_scrape_recipe_defaults_empty_ingredients(monkeypatch):
     monkeypatch.setattr(scraper_module, "scrape_me", lambda url: NoIngredients())
 
     recipe = await scrape_recipe("https://example.com/recipe")
+    assert recipe is not None
     assert recipe.recipeIngredient == ["See instructions"]
 
 

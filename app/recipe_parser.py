@@ -265,11 +265,11 @@ def parse_recipe_html(content: str) -> RecipeCreate | None:
     try:
         soup = BeautifulSoup(content, "html.parser")
 
-        title_el = soup.find(attrs={"itemprop": "name"}) or soup.find(class_="name")
+        title_el = soup.find(itemprop="name") or soup.find(class_="name")
         name = title_el.get_text(strip=True) if title_el else "Untitled Recipe"
 
         ingredients = []
-        for el in soup.find_all(attrs={"itemprop": "recipeIngredient"}):
+        for el in soup.find_all(itemprop="recipeIngredient"):
             ing = _parse_html_ingredient(el)
             if ing:
                 ingredients.append(ing)
@@ -277,7 +277,7 @@ def parse_recipe_html(content: str) -> RecipeCreate | None:
             ingredients = ["See instructions"]
 
         instructions = ""
-        inst_el = soup.find(attrs={"itemprop": "recipeInstructions"})
+        inst_el = soup.find(itemprop="recipeInstructions")
         if inst_el:
             steps = [
                 p.get_text(strip=True)
@@ -286,14 +286,14 @@ def parse_recipe_html(content: str) -> RecipeCreate | None:
             ]
             instructions = "\n\n".join(steps)
 
-        prep_el = soup.find(attrs={"itemprop": "prepTime"})
+        prep_el = soup.find(itemprop="prepTime")
         prep_time = (
             minutes_to_duration(_parse_time_text(prep_el.get_text()))
             if prep_el
             else None
         )
 
-        cook_el = soup.find(attrs={"itemprop": "cookTime"})
+        cook_el = soup.find(itemprop="cookTime")
         cook_time = (
             minutes_to_duration(_parse_time_text(cook_el.get_text()))
             if cook_el
@@ -301,7 +301,7 @@ def parse_recipe_html(content: str) -> RecipeCreate | None:
         )
 
         if not prep_time and not cook_time:
-            total_el = soup.find(attrs={"itemprop": "totalTime"})
+            total_el = soup.find(itemprop="totalTime")
             cook_time = (
                 minutes_to_duration(_parse_time_text(total_el.get_text()))
                 if total_el
@@ -309,37 +309,41 @@ def parse_recipe_html(content: str) -> RecipeCreate | None:
             )
 
         url = None
-        source_el = soup.find(attrs={"itemprop": "url"})
+        source_el = soup.find(itemprop="url")
         if source_el:
-            url = source_el.get("href")
+            href = source_el.get("href")
+            if isinstance(href, str):
+                url = href
         if not url:
-            notes_el = soup.find(attrs={"itemprop": "comment"})
+            notes_el = soup.find(itemprop="comment")
             if notes_el:
                 url_match = re.search(r"https?://\S+", notes_el.get_text())
                 if url_match:
                     url = url_match.group(0).rstrip("*")
 
         image = None
-        img_el = soup.find("img", attrs={"itemprop": "image"})
+        img_el = soup.find("img", itemprop="image")
         if img_el:
             parent_a = img_el.find_parent("a")
-            if parent_a and str(parent_a.get("href", "")).startswith("http"):
-                image = parent_a["href"]
+            if parent_a:
+                href = parent_a.get("href")
+                if isinstance(href, str) and href.startswith("http"):
+                    image = href
 
         description = ""
-        notes_el = soup.find(attrs={"itemprop": "comment"})
+        notes_el = soup.find(itemprop="comment")
         if notes_el:
             notes_text = notes_el.get_text(strip=True)
             if not re.match(r"^https?://", notes_text):
                 description = notes_text
 
         recipe_yield = None
-        yield_el = soup.find(attrs={"itemprop": "recipeYield"})
+        yield_el = soup.find(itemprop="recipeYield")
         if yield_el:
             recipe_yield = yield_el.get_text(strip=True) or None
 
         recipe_category = None
-        cat_el = soup.find(attrs={"itemprop": "recipeCategory"})
+        cat_el = soup.find(itemprop="recipeCategory")
         if cat_el:
             recipe_category = [cat_el.get_text(strip=True)]
 

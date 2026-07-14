@@ -21,6 +21,9 @@ pytest tests/test_recipes_crud.py -v
 # Run a single test by name
 pytest tests/test_recipes_crud.py::test_create_recipe -v
 
+# Type-check (mypy config in pyproject.toml; CI runs this)
+make typecheck
+
 # Start local dev server (full read/write on port 8000)
 uvicorn main:app --reload
 
