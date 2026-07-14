@@ -121,6 +121,22 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
     async def app_mode():
         return {"mode": mode}
 
+    @fastapi_app.get("/health")
+    async def health():
+        """Liveness check: process is up. No dependencies touched."""
+        return {"status": "ok"}
+
+    @fastapi_app.get("/health/ready")
+    async def health_ready():
+        """Readiness check: verifies the database pool is reachable."""
+        try:
+            pool = await get_pool()
+            async with pool.acquire() as conn:
+                await conn.fetchval("SELECT 1")
+        except Exception:
+            raise HTTPException(status_code=503, detail="Database unavailable")
+        return {"status": "ready"}
+
     @fastapi_app.get("/shop")
     async def shop_redirect(
         store: str, q: str = Query(..., min_length=1, max_length=200)
