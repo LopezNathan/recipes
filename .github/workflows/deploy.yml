@@ -62,7 +62,7 @@ jobs:
       - name: Pull and restart
         run: |
           ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_ed25519 ubuntu@${{ secrets.SERVER_IP }} \
-            'cd /opt/recipes && sudo docker compose pull && sudo docker compose up -d --remove-orphans'
+            'cd /opt/recipes && sudo docker compose pull && sudo docker compose up -d --remove-orphans --wait --wait-timeout 180'
 
   release:
     runs-on: ubuntu-latest
