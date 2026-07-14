@@ -133,8 +133,10 @@ def setup_read_only_routes(fastapi_app: FastAPI, mode: str = "public"):
             pool = await get_pool()
             async with pool.acquire() as conn:
                 await conn.fetchval("SELECT 1")
-        except Exception:
-            raise HTTPException(status_code=503, detail="Database unavailable")
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503, detail="Database unavailable"
+            ) from exc
         return {"status": "ready"}
 
     @fastapi_app.get("/shop")
