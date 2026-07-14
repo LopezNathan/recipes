@@ -115,6 +115,7 @@ static/
   app.js             # Frontend JavaScript
 tests/               # pytest test suite
 infra/               # Terraform (GCP + Cloudflare)
+docs/                # Runbooks (backup restore procedure)
 docker-compose.local.yml    # Local dev Postgres
 docker-compose.yml          # Production containers
 ```
@@ -136,6 +137,22 @@ The deploy job requires these repository secrets:
 - `DEPLOY_KEY` — private SSH key authorized on the server
 - `SERVER_IP` — server host/IP to SSH into
 - `SSH_KNOWN_HOSTS` — the server's pinned host key (verified with `StrictHostKeyChecking=yes` instead of a blind `ssh-keyscan` at deploy time). Generate it from a trusted network with `ssh-keyscan -H <server-ip>` and paste the output into the secret.
+
+### Database backups
+
+`.github/workflows/backup.yml` runs nightly (06:00 UTC, plus manual runs via
+`workflow_dispatch`): it `pg_dump`s the production Neon database, verifies the
+dump by restoring it into a scratch Postgres container and checking the
+`recipes` table is non-empty, then uploads it to a Backblaze B2 bucket over
+B2's S3-compatible API. Retention is a 30-day lifecycle rule on the bucket.
+The restore procedure (from a B2 dump or Neon point-in-time restore) is
+documented in [docs/RESTORE.md](docs/RESTORE.md).
+
+The backup workflow requires these repository secrets:
+- `BACKUP_DATABASE_URL` — Neon connection string (direct endpoint, not `-pooler`)
+- `B2_KEY_ID` / `B2_APP_KEY` — B2 application key scoped to the backup bucket
+- `B2_ENDPOINT` — e.g. `https://s3.us-west-004.backblazeb2.com`
+- `B2_BUCKET` — backup bucket name
 
 ### Releasing a new version
 
@@ -193,7 +210,7 @@ rsync the repo to the server then SSH in to pull the latest image and restart. R
 
 ## Database
 
-PostgreSQL via asyncpg. Schema is created automatically on startup (`CREATE TABLE IF NOT EXISTS`). In production, the database is hosted on Neon — no data is stored on the GCP instance.
+PostgreSQL via asyncpg. Schema is created automatically on startup (`CREATE TABLE IF NOT EXISTS`). In production, the database is hosted on Neon — no data is stored on the GCP instance. Nightly dumps are uploaded to Backblaze B2 (see [Database backups](#database-backups) and [docs/RESTORE.md](docs/RESTORE.md)).
 
 Local connection (from `.env.example`):
 ```

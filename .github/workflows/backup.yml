@@ -1,0 +1,85 @@
+# Nightly pg_dump of the production Neon database, verified by restoring
+# into a scratch Postgres container, then uploaded to Backblaze B2 via its
+# S3-compatible API. Retention is handled by a lifecycle rule on the B2
+# bucket, not by this workflow. Restore procedure: docs/RESTORE.md
+#
+# Required repository secrets:
+#   BACKUP_DATABASE_URL  - Neon connection string (direct endpoint, not -pooler)
+#   B2_KEY_ID            - B2 application key ID (scoped to the backup bucket)
+#   B2_APP_KEY           - B2 application key secret
+#   B2_ENDPOINT          - e.g. https://s3.us-west-004.backblazeb2.com
+#   B2_BUCKET            - backup bucket name
+
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 6 * * *' # daily, 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Install PostgreSQL 17 client
+        # pg_dump's major version must be >= the server's; 17 covers Neon
+        # on 16 or 17. The runner's default client is older, so pull from PGDG.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          FILENAME="recipes-$(date -u +%Y-%m-%dT%H%M%SZ).dump"
+          pg_dump "$DATABASE_URL" --format=custom --file="$FILENAME"
+          echo "FILENAME=$FILENAME" >> "$GITHUB_ENV"
+
+      - name: Verify dump restores
+        # Restore into the scratch container and require a non-empty recipes
+        # table, so a corrupt or empty dump fails the run instead of being
+        # discovered during an actual restore.
+        run: |
+          SCRATCH_DB="postgresql://postgres:postgres@localhost:5432/postgres"
+          pg_restore --no-owner --no-privileges --dbname="$SCRATCH_DB" "$FILENAME"
+          COUNT=$(psql "$SCRATCH_DB" -tAc 'SELECT count(*) FROM recipes')
+          echo "Dump contains $COUNT recipes"
+          test "$COUNT" -gt 0
+
+      - name: Upload to B2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+          AWS_ENDPOINT_URL: ${{ secrets.B2_ENDPOINT }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          # Some S3-compatible providers (B2 included, at time of writing)
+          # reject the CRC32 integrity checksums that AWS CLI v2.23+ sends
+          # by default; when_required only sends them where the API demands.
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+        run: |
+          # SigV4 signing needs the region that is embedded in the B2
+          # endpoint (https://s3.us-west-004.backblazeb2.com -> us-west-004).
+          REGION="${AWS_ENDPOINT_URL#https://s3.}"
+          export AWS_REGION="${REGION%.backblazeb2.com}"
+          aws s3 cp "$FILENAME" "s3://$B2_BUCKET/backups/$FILENAME"
