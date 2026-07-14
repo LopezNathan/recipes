@@ -3,6 +3,7 @@ PIP     = venv/bin/pip
 PYTEST  = venv/bin/pytest
 UVICORN = venv/bin/uvicorn
 RUFF    = venv/bin/ruff
+MYPY    = venv/bin/mypy
 
 DEPLOY_HOST ?= ubuntu@$(SERVER_IP)
 DEPLOY_DIR   = /opt/recipes
@@ -13,7 +14,7 @@ export
 
 BUMP ?= patch
 
-.PHONY: venv install up down test test-v lint format dev reset logs deploy release
+.PHONY: venv install up down test test-v lint format typecheck dev reset logs deploy release
 
 venv:
 	python3 -m venv venv
@@ -41,6 +42,9 @@ lint:
 format:
 	$(RUFF) check --fix .
 	$(RUFF) format .
+
+typecheck:
+	$(MYPY)
 
 dev: up
 	$(UVICORN) main:app --reload

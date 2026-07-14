@@ -24,6 +24,24 @@ jobs:
       - name: Ruff format check
         run: ruff format --check .
 
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+
+      # mypy resolves types from the installed runtime packages
+      # (fastapi, pydantic, ...), so it needs both requirement files.
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Mypy
+        run: mypy
+
   test:
     runs-on: ubuntu-latest
 
