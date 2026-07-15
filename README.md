@@ -140,7 +140,7 @@ Pull requests to `main` run `.github/workflows/ci.yml`, which has three jobs: **
 
 The deploy workflow (`.github/workflows/deploy.yml`) runs on pushes to `main` and on `v*` tags:
 1. Builds the Docker image and pushes it to GHCR (`ghcr.io/lopeznathan/recipes`). Every run updates `:latest`; a `v*` tag push also publishes `:<version>` (the tag with the leading `v` stripped).
-2. SSHes into the server and runs `docker compose pull && docker compose up -d`
+2. SSHes into the server and runs `docker compose pull && docker compose up -d --wait`. Both production containers define a `healthcheck` that probes `GET /health` from inside the container (via Python stdlib — the slim image has no curl), so `--wait` makes the deploy step fail if the new containers don't become healthy within 180 seconds. The `restart: unless-stopped` policy still handles crashed processes; the healthcheck adds unhealthy-state visibility in `docker ps` and gates deploys.
 3. On a `v*` tag, creates a GitHub release with auto-generated notes.
 
 The deploy job requires these repository secrets:

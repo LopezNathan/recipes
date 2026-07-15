@@ -7,6 +7,13 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
     command: uvicorn main:public_app --host 0.0.0.0 --port 8000
+    healthcheck:
+      # python:*-slim has no curl/wget; urlopen raises (non-zero exit) on any non-2xx
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   private:
     image: ghcr.io/lopeznathan/recipes:latest
@@ -16,3 +23,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
     command: uvicorn main:private_app --host 0.0.0.0 --port 8001
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
