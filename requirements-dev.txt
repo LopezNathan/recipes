@@ -1,4 +1,4 @@
 # Tooling not needed at runtime (kept out of the Docker image).
-ruff==0.15.20
+ruff==0.15.21
 mypy==2.3.0
 asyncpg-stubs==0.31.3
