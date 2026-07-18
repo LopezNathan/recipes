@@ -24,6 +24,12 @@ jobs:
     defaults:
       run:
         working-directory: infra
+    # Non-sensitive variables come from committed defaults in infra/variables.tf;
+    # only the true secrets arrive via TF_VAR_ environment variables.
+    env:
+      TF_VAR_database_url: ${{ secrets.TF_VAR_DATABASE_URL }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.TF_VAR_CLOUDFLARE_API_TOKEN }}
+      TF_VAR_tunnel_token: ${{ secrets.TF_VAR_TUNNEL_TOKEN }}
     steps:
       - uses: actions/checkout@v7
 
@@ -37,21 +43,12 @@ jobs:
         with:
           terraform_wrapper: false
 
-      - name: Write terraform.tfvars
-        env:
-          TF_VARS: ${{ secrets.TF_VARS }}
-        run: printf '%s' "$TF_VARS" > terraform.tfvars
-
       - name: Terraform init
         run: terraform init -input=false
 
       - name: Rebuild instance
-        # credentials_file is overridden to empty because the tfvars secret may
-        # carry a local key path; in CI the google-github-actions/auth step
-        # provides application default credentials instead.
         run: |
           terraform apply -input=false -auto-approve -lock-timeout=5m \
-            -var credentials_file= \
             -replace=google_compute_instance.app
 
       - name: Wait for app to come back healthy

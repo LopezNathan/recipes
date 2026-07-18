@@ -178,8 +178,10 @@ up to 15 minutes and fails if the app doesn't come back.
 The rebuild and deploy jobs share a `recipes-server` concurrency group so a
 deploy never SSHes into a half-rebuilt server.
 
-GCP auth is keyless via Workload Identity Federation (see the deploy section above). The only repository secret the rebuild workflow needs is:
-- `TF_VARS` — the full contents of `infra/terraform.tfvars` (`gh secret set TF_VARS < infra/terraform.tfvars`). Re-upload it whenever the tfvars change. The `credentials_file` entry is overridden in CI.
+GCP auth is keyless via Workload Identity Federation (see the deploy section above). Non-sensitive Terraform variables come from committed defaults in `infra/variables.tf`; the rebuild workflow needs only the three real secrets, passed as `TF_VAR_*` environment variables from repository secrets:
+- `TF_VAR_DATABASE_URL` — Neon connection string
+- `TF_VAR_CLOUDFLARE_API_TOKEN` — Cloudflare API token
+- `TF_VAR_TUNNEL_TOKEN` — Cloudflare Tunnel token
 
 ### Releasing a new version
 
@@ -221,18 +223,13 @@ terraform init
 terraform apply
 ```
 
-Required variables in `infra/terraform.tfvars` (not committed — contains secrets):
-- `project_id` — GCP project ID
-- `ssh_public_key` — public key content authorized on the instance
-- `repo_url` — Git repo URL (e.g. `https://github.com/you/recipes.git`)
-- `github_token` — fine-grained PAT with Contents:read (for private repos)
+Non-sensitive variables (project, region/zone, repo URL, Cloudflare IDs, subdomains, SSH public key, owner email) have committed defaults in `infra/variables.tf` — one source of truth shared by local runs and CI. `infra/terraform.tfvars` (not committed — contains secrets) only needs:
 - `database_url` — Neon connection string (`postgresql://...?sslmode=require`)
 - `cloudflare_api_token` — token with Zone:DNS:Edit and Zero Trust:Edit permissions
-- `cloudflare_account_id`, `cloudflare_zone_id`
-- `subdomain` — public subdomain (default: `recipes`)
-- `private_subdomain` — private tunnel subdomain (default: `recipes-private`)
 - `tunnel_token` — Cloudflare Tunnel token (from Zero Trust dashboard after first apply)
-- `owner_email` — email allowed through Cloudflare Access OTP
+- `credentials_file` — path to a local GCP service-account key (local applies only; CI uses Workload Identity Federation)
+
+Any default can still be overridden locally by adding that key to `terraform.tfvars`.
 
 ### Manual deploy
 
