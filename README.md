@@ -217,6 +217,15 @@ locking prevents concurrent applies. Checkouts that still have pre-migration
 local state should switch with `terraform init -reconfigure` (plain `init`
 prompts to re-migrate the stale local copy).
 
+The config is split into two stacks with separate states:
+- `infra/` — the app stack (instance, network, Cloudflare). Applied by CI
+  (weekly rebuild) and locally.
+- `infra/bootstrap/` — the resources that grant CI its access: the `github-ci`
+  service account, Workload Identity pool/provider, and IAM bindings. Applied
+  **only manually by an admin** (state prefix `bootstrap`). This split exists so
+  the CI-applied state never contains IAM resources — `github-ci` has no IAM
+  permissions and would fail refreshing them.
+
 ```bash
 cd infra
 terraform init
