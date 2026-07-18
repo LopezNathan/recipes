@@ -5,7 +5,7 @@ output "public_ip" {
 
 output "ssh_command" {
   description = "SSH command to connect to the server"
-  value       = "ssh ubuntu@${google_compute_address.static.address}"
+  value       = "gcloud compute ssh ${google_compute_instance.app.name} --zone=${var.zone}"
 }
 
 output "url" {

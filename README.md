@@ -143,7 +143,7 @@ The deploy workflow (`.github/workflows/deploy.yml`) runs on pushes to `main` an
 2. Connects to the server with `gcloud compute ssh` and runs `docker compose pull && docker compose up -d --wait`. Both production containers define a `healthcheck` that probes `GET /health` from inside the container (via Python stdlib — the slim image has no curl), so `--wait` makes the deploy step fail if the new containers don't become healthy within 180 seconds. The `restart: unless-stopped` policy still handles crashed processes; the healthcheck adds unhealthy-state visibility in `docker ps` and gates deploys.
 3. On a `v*` tag, creates a GitHub release with auto-generated notes.
 
-SSH auth goes through gcloud rather than a static deploy key: gcloud pushes a short-lived key (`--ssh-key-expire-after=10m`) to project metadata and verifies the server against host keys the guest agent publishes to guest attributes at boot (`--strict-host-key-checking=yes`). This is MITM-safe without any pinned `known_hosts`, and — unlike a pinned host key — survives instance rebuilds. The former `DEPLOY_KEY` / `SERVER_IP` / `SSH_KNOWN_HOSTS` secrets are no longer used by CI (`make deploy` still uses a plain SSH key locally).
+SSH auth goes through gcloud rather than a static deploy key: gcloud pushes a short-lived key (`--ssh-key-expire-after=10m`) to project metadata and verifies the server against host keys the guest agent publishes to guest attributes at boot (`--strict-host-key-checking=yes`). This is MITM-safe without any pinned `known_hosts`, and — unlike a pinned host key — survives instance rebuilds. The former `DEPLOY_KEY` / `SERVER_IP` / `SSH_KNOWN_HOSTS` secrets are gone, and there is no static SSH key baked into instance metadata at all — local access uses `gcloud compute ssh` too (install with `brew install google-cloud-cli`, then `gcloud auth login`).
 
 GCP auth itself is keyless: [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation) (provisioned in `infra/ci.tf`) lets workflows exchange their GitHub OIDC token (`permissions: id-token: write`) for short-lived credentials of the dedicated `github-ci` service account — no service-account key exists for CI. The account is narrowly scoped: `compute.admin`, `iam.serviceAccountUser` on the default compute SA only, and object access on the tfstate bucket only. Impersonation is restricted to workflows from this repository via an attribute condition on the pool provider.
 
@@ -223,7 +223,7 @@ terraform init
 terraform apply
 ```
 
-Non-sensitive variables (project, region/zone, repo URL, Cloudflare IDs, subdomains, SSH public key, owner email) have committed defaults in `infra/variables.tf` — one source of truth shared by local runs and CI. `infra/terraform.tfvars` (not committed — contains secrets) only needs:
+Non-sensitive variables (project, region/zone, repo URL, Cloudflare IDs, subdomains, owner email) have committed defaults in `infra/variables.tf` — one source of truth shared by local runs and CI. `infra/terraform.tfvars` (not committed — contains secrets) only needs:
 - `database_url` — Neon connection string (`postgresql://...?sslmode=require`)
 - `cloudflare_api_token` — token with Zone:DNS:Edit and Zero Trust:Edit permissions
 - `tunnel_token` — Cloudflare Tunnel token (from Zero Trust dashboard after first apply)
@@ -237,7 +237,7 @@ Any default can still be overridden locally by adding that key to `terraform.tfv
 make deploy
 ```
 
-rsync the repo to the server then SSH in to pull the latest image and restart. Requires `SERVER_IP` set in `.env`.
+SSHes into the server via `gcloud compute ssh` (requires the gcloud CLI, authenticated with `gcloud auth login`) and runs `git pull` + `docker compose pull` + `up -d` — same as the deploy workflow. The `terraform output ssh_command` value gives the interactive SSH command for debugging.
 
 ## Database
 

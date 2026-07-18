@@ -22,12 +22,6 @@ variable "credentials_file" {
   default     = ""
 }
 
-variable "ssh_public_key" {
-  description = "SSH public key string to authorize on the instance (e.g. contents of ~/.ssh/id_ed25519.pub)"
-  type        = string
-  default     = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPO7VhnRdjQr1yVNIkMbywMqToH99pBL26UJle0sTOF7 nathan@Nathans-MBP.lan"
-}
-
 variable "repo_url" {
   description = "Git repo URL (e.g. https://github.com/you/recipes.git)"
   type        = string
