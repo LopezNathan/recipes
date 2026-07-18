@@ -140,13 +140,10 @@ Pull requests to `main` run `.github/workflows/ci.yml`, which has three jobs: **
 
 The deploy workflow (`.github/workflows/deploy.yml`) runs on pushes to `main` and on `v*` tags:
 1. Builds the Docker image and pushes it to GHCR (`ghcr.io/lopeznathan/recipes`). Every run updates `:latest`; a `v*` tag push also publishes `:<version>` (the tag with the leading `v` stripped).
-2. SSHes into the server and runs `docker compose pull && docker compose up -d --wait`. Both production containers define a `healthcheck` that probes `GET /health` from inside the container (via Python stdlib — the slim image has no curl), so `--wait` makes the deploy step fail if the new containers don't become healthy within 180 seconds. The `restart: unless-stopped` policy still handles crashed processes; the healthcheck adds unhealthy-state visibility in `docker ps` and gates deploys.
+2. Connects to the server with `gcloud compute ssh` and runs `docker compose pull && docker compose up -d --wait`. Both production containers define a `healthcheck` that probes `GET /health` from inside the container (via Python stdlib — the slim image has no curl), so `--wait` makes the deploy step fail if the new containers don't become healthy within 180 seconds. The `restart: unless-stopped` policy still handles crashed processes; the healthcheck adds unhealthy-state visibility in `docker ps` and gates deploys.
 3. On a `v*` tag, creates a GitHub release with auto-generated notes.
 
-The deploy job requires these repository secrets:
-- `DEPLOY_KEY` — private SSH key authorized on the server
-- `SERVER_IP` — server host/IP to SSH into
-- `SSH_KNOWN_HOSTS` — the server's pinned host key (verified with `StrictHostKeyChecking=yes` instead of a blind `ssh-keyscan` at deploy time). Generate it from a trusted network with `ssh-keyscan -H <server-ip>` and paste the output into the secret.
+SSH auth goes through gcloud rather than a static deploy key: gcloud pushes a short-lived key (`--ssh-key-expire-after=10m`) to project metadata and verifies the server against host keys the guest agent publishes to guest attributes at boot (`--strict-host-key-checking=yes`). This is MITM-safe without any pinned `known_hosts`, and — unlike a pinned host key — survives instance rebuilds. The deploy job needs only the `GCP_SA_KEY` repository secret (service account JSON key, shared with the rebuild workflow). The former `DEPLOY_KEY` / `SERVER_IP` / `SSH_KNOWN_HOSTS` secrets are no longer used by CI (`make deploy` still uses a plain SSH key locally).
 
 ### Database backups
 
@@ -163,6 +160,25 @@ The backup workflow requires these repository secrets:
 - `B2_KEY_ID` / `B2_APP_KEY` — B2 application key scoped to the backup bucket
 - `B2_ENDPOINT` — e.g. `https://s3.us-west-004.backblazeb2.com`
 - `B2_BUCKET` — backup bucket name
+
+### Weekly instance rebuild
+
+`.github/workflows/rebuild.yml` runs weekly (Mondays 09:00 UTC, plus manual
+runs via `workflow_dispatch`) and recreates the GCP instance with
+`terraform apply -replace=google_compute_instance.app`. Rebuilding from the
+current `ubuntu-2204-lts` family image (plus `package_upgrade` in cloud-init)
+keeps the OS fully patched without maintaining an in-place upgrade path. The
+static IP, DNS, and tunnel all survive the rebuild; the boot disk does not,
+which is fine because the server is stateless (the database lives in Neon).
+After the apply, the workflow polls `https://<subdomain>.<domain>/health` for
+up to 15 minutes and fails if the app doesn't come back.
+
+The rebuild and deploy jobs share a `recipes-server` concurrency group so a
+deploy never SSHes into a half-rebuilt server.
+
+The rebuild workflow requires these repository secrets:
+- `GCP_SA_KEY` — the GCP service account JSON key (same one the deploy job uses)
+- `TF_VARS` — the full contents of `infra/terraform.tfvars` (`gh secret set TF_VARS < infra/terraform.tfvars`). Re-upload it whenever the tfvars change. The `credentials_file` entry is overridden in CI.
 
 ### Releasing a new version
 

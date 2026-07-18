@@ -46,23 +46,28 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    # Shared with rebuild.yml so a deploy never SSHes into a half-rebuilt server.
+    concurrency:
+      group: recipes-server
     steps:
-      - name: Set up SSH
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          # Pin the server's host key from a secret instead of trusting
-          # whatever ssh-keyscan returns at deploy time — a live keyscan
-          # accepts any key presented, which defeats MITM protection.
-          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
 
       - name: Pull and restart
+        # gcloud pushes a short-lived SSH key to project metadata and verifies
+        # the server against host keys published to guest attributes at boot
+        # (enable-guest-attributes in infra/compute.tf) — MITM-safe without a
+        # pinned SSH_KNOWN_HOSTS secret, and it survives instance rebuilds.
         run: |
-          ssh -o StrictHostKeyChecking=yes -i ~/.ssh/id_ed25519 ubuntu@${{ secrets.SERVER_IP }} \
-            'cd /opt/recipes && sudo docker compose pull && sudo docker compose up -d --remove-orphans --wait --wait-timeout 180'
+          gcloud compute ssh recipes-server --zone=us-east1-c --quiet \
+            --ssh-key-expire-after=10m \
+            --strict-host-key-checking=yes \
+            --command='cd /opt/recipes && sudo docker compose pull && sudo docker compose up -d --remove-orphans --wait --wait-timeout 180'
 
   release:
     runs-on: ubuntu-latest
