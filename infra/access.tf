@@ -1,3 +1,10 @@
+# The allowed email is the Cloudflare account owner's, read from the account's
+# member list instead of hardcoded — a personal account has exactly one member.
+data "cloudflare_account_members" "owner" {
+  account_id = var.cloudflare_account_id
+  status     = "accepted"
+}
+
 resource "cloudflare_zero_trust_access_policy" "private" {
   account_id = var.cloudflare_account_id
   name       = "Allow owner"
@@ -6,7 +13,7 @@ resource "cloudflare_zero_trust_access_policy" "private" {
   include = [
     {
       email = {
-        email = var.owner_email
+        email = data.cloudflare_account_members.owner.result[0].email
       }
     }
   ]

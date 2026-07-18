@@ -223,7 +223,7 @@ terraform init
 terraform apply
 ```
 
-Non-sensitive variables (project, region/zone, repo URL, Cloudflare IDs, subdomains, owner email) have committed defaults in `infra/variables.tf` — one source of truth shared by local runs and CI. `infra/terraform.tfvars` (not committed — contains secrets) only needs:
+Non-sensitive variables (project, region/zone, repo URL, Cloudflare IDs, subdomains) have committed defaults in `infra/variables.tf` — one source of truth shared by local runs and CI. The Cloudflare Access allowlist email is not configured at all: it's read live from the account's member list (`cloudflare_account_members` data source), which requires the API token to have **Account → Account Members → Read** in addition to DNS and Zero Trust edit permissions. `infra/terraform.tfvars` (not committed — contains secrets) only needs:
 - `database_url` — Neon connection string (`postgresql://...?sslmode=require`)
 - `cloudflare_api_token` — token with Zone:DNS:Edit and Zero Trust:Edit permissions
 - `tunnel_token` — Cloudflare Tunnel token (from Zero Trust dashboard after first apply)
