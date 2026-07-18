@@ -191,6 +191,13 @@ The frontend detects which app it's served from via `GET /app-mode` and shows/hi
 
 Terraform in `infra/` provisions the GCP static IP, compute instance, Cloudflare DNS, Tunnel, and Access policy. cloud-init bootstraps Docker, writes the `.env`, installs cloudflared as a systemd service, and starts the containers on first boot.
 
+State lives in the `recipes-496402-tfstate` GCS bucket (versioned, public access
+blocked; the last 10 noncurrent state versions are retained). The bucket was
+created once outside this config and is not managed by Terraform. GCS-native
+locking prevents concurrent applies. Checkouts that still have pre-migration
+local state should switch with `terraform init -reconfigure` (plain `init`
+prompts to re-migrate the stale local copy).
+
 ```bash
 cd infra
 terraform init
