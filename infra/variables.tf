@@ -72,6 +72,19 @@ variable "tunnel_token" {
   default     = ""
 }
 
+variable "ssh_host_ed25519_private" {
+  description = "Pinned ed25519 SSH host private key for the instance. Keeps the server's host identity stable across rebuilds so the deploy workflow's pinned SSH_KNOWN_HOSTS secret stays valid. Generate with: ssh-keygen -t ed25519 -f ssh_host_ed25519_key -N '' -C recipes-server"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "ssh_host_ed25519_public" {
+  description = "Public half of the pinned SSH host key (contents of ssh_host_ed25519_key.pub)"
+  type        = string
+  default     = ""
+}
+
 variable "owner_email" {
   description = "Email address allowed through Cloudflare Access (one-time PIN sent here)"
   type        = string

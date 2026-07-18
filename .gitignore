@@ -50,3 +50,5 @@ infra/terraform.tfstate
 infra/terraform.tfstate.backup
 infra/*.tfplan
 infra/*.json
+infra/ssh_host_ed25519_key
+infra/ssh_host_ed25519_key.pub

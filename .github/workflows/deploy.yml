@@ -46,6 +46,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    # Shared with rebuild.yml so a deploy never SSHes into a half-rebuilt server.
+    concurrency:
+      group: recipes-server
     steps:
       - name: Set up SSH
         run: |

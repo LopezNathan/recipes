@@ -146,7 +146,7 @@ The deploy workflow (`.github/workflows/deploy.yml`) runs on pushes to `main` an
 The deploy job requires these repository secrets:
 - `DEPLOY_KEY` — private SSH key authorized on the server
 - `SERVER_IP` — server host/IP to SSH into
-- `SSH_KNOWN_HOSTS` — the server's pinned host key (verified with `StrictHostKeyChecking=yes` instead of a blind `ssh-keyscan` at deploy time). Generate it from a trusted network with `ssh-keyscan -H <server-ip>` and paste the output into the secret.
+- `SSH_KNOWN_HOSTS` — the server's pinned host key (verified with `StrictHostKeyChecking=yes` instead of a blind `ssh-keyscan` at deploy time). The host key is pinned via Terraform (`ssh_host_ed25519_*` variables), so the secret is simply `<server-ip> <contents of infra/ssh_host_ed25519_key.pub>` and stays valid across instance rebuilds.
 
 ### Database backups
 
@@ -164,6 +164,25 @@ The backup workflow requires these repository secrets:
 - `B2_ENDPOINT` — e.g. `https://s3.us-west-004.backblazeb2.com`
 - `B2_BUCKET` — backup bucket name
 
+### Weekly instance rebuild
+
+`.github/workflows/rebuild.yml` runs weekly (Mondays 09:00 UTC, plus manual
+runs via `workflow_dispatch`) and recreates the GCP instance with
+`terraform apply -replace=google_compute_instance.app`. Rebuilding from the
+current `ubuntu-2204-lts` family image (plus `package_upgrade` in cloud-init)
+keeps the OS fully patched without maintaining an in-place upgrade path. The
+static IP, DNS, tunnel, and pinned SSH host key all survive the rebuild; the
+boot disk does not, which is fine because the server is stateless (the database
+lives in Neon). After the apply, the workflow polls `https://<subdomain>.<domain>/health`
+for up to 15 minutes and fails if the app doesn't come back.
+
+The rebuild and deploy jobs share a `recipes-server` concurrency group so a
+deploy never SSHes into a half-rebuilt server.
+
+The rebuild workflow requires these repository secrets:
+- `GCP_SA_KEY` — the GCP service account JSON key (same account Terraform uses locally)
+- `TF_VARS` — the full contents of `infra/terraform.tfvars` (`gh secret set TF_VARS < infra/terraform.tfvars`). Re-upload it whenever the tfvars change. The `credentials_file` entry is overridden in CI.
+
 ### Releasing a new version
 
 Versioning is git-tag-only (there is no `version.txt`). `make release` bumps from the latest tag and pushes a new `v*` tag:
@@ -176,7 +195,7 @@ Pushing the tag triggers the workflow above, which builds the `:latest` and `:<v
 
 ### Production architecture
 
-- **GCP e2-micro** (us-central1, free tier) running two Docker containers
+- **GCP e2-micro** (us-east1, free tier) running two Docker containers
   - `public` (port 80) — read-only, served publicly via Cloudflare proxy
   - `private` (port 8001) — read/write, accessible only via Cloudflare Tunnel
 - **Docker image** hosted on GHCR (`ghcr.io/lopeznathan/recipes`)
@@ -191,9 +210,15 @@ The frontend detects which app it's served from via `GET /app-mode` and shows/hi
 
 Terraform in `infra/` provisions the GCP static IP, compute instance, Cloudflare DNS, Tunnel, and Access policy. cloud-init bootstraps Docker, writes the `.env`, installs cloudflared as a systemd service, and starts the containers on first boot.
 
+State lives in the `recipes-496402-tfstate` GCS bucket (versioned, public
+access blocked; the last 10 noncurrent state versions are retained). The bucket
+was created once outside this config and is not managed by Terraform. Both
+local applies and the weekly rebuild workflow share this state, with GCS-native
+locking preventing concurrent applies.
+
 ```bash
 cd infra
-terraform init
+terraform init   # use -reconfigure if switching an old checkout from local state
 terraform apply
 ```
 
@@ -209,6 +234,7 @@ Required variables in `infra/terraform.tfvars` (not committed — contains secre
 - `private_subdomain` — private tunnel subdomain (default: `recipes-private`)
 - `tunnel_token` — Cloudflare Tunnel token (from Zero Trust dashboard after first apply)
 - `owner_email` — email allowed through Cloudflare Access OTP
+- `ssh_host_ed25519_private` / `ssh_host_ed25519_public` — pinned SSH host keypair (generate with `ssh-keygen -t ed25519 -f infra/ssh_host_ed25519_key -N '' -C recipes-server`). Keeps the server's host identity stable across weekly rebuilds so the `SSH_KNOWN_HOSTS` secret never goes stale. Optional — if unset, the instance generates fresh host keys on each rebuild.
 
 ### Manual deploy
 

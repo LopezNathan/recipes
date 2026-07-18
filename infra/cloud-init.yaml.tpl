@@ -1,7 +1,18 @@
 #cloud-config
 
 package_update: true
+package_upgrade: true
 
+%{ if ssh_host_ed25519_private != "" ~}
+# Pin the host identity so weekly rebuilds don't invalidate the
+# SSH_KNOWN_HOSTS secret used by the deploy workflow.
+ssh_deletekeys: true
+ssh_genkeytypes: [ed25519]
+ssh_keys:
+  ed25519_private: |
+    ${indent(4, ssh_host_ed25519_private)}
+  ed25519_public: ${ssh_host_ed25519_public}
+%{ endif ~}
 packages:
   - curl
   - git

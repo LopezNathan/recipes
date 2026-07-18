@@ -1,0 +1,67 @@
+name: Weekly Instance Rebuild
+
+# Recreates the GCP instance from the current ubuntu-2204-lts family image so
+# the server always boots from a freshly patched OS image (cloud-init then
+# applies any remaining updates via package_upgrade). The static IP, DNS, and
+# tunnel survive; the boot disk does not — the server is stateless (DB is Neon).
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Mondays 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    # Shared with the deploy job in deploy.yml so a deploy never SSHes into a
+    # half-rebuilt server.
+    concurrency:
+      group: recipes-server
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Write terraform.tfvars
+        env:
+          TF_VARS: ${{ secrets.TF_VARS }}
+        run: printf '%s' "$TF_VARS" > terraform.tfvars
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Rebuild instance
+        # credentials_file is overridden to empty because the tfvars secret may
+        # carry a local key path; in CI the google-github-actions/auth step
+        # provides application default credentials instead.
+        run: |
+          terraform apply -input=false -auto-approve -lock-timeout=5m \
+            -var credentials_file= \
+            -replace=google_compute_instance.app
+
+      - name: Wait for app to come back healthy
+        run: |
+          URL=$(terraform output -raw url)
+          echo "Polling $URL/health"
+          for i in $(seq 1 60); do
+            if curl -fsS --max-time 10 "$URL/health" > /dev/null 2>&1; then
+              echo "Healthy after ~$((i * 15))s"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "App did not become healthy within 15 minutes"
+          exit 1

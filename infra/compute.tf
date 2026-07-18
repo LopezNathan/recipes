@@ -24,11 +24,13 @@ resource "google_compute_instance" "app" {
   }
 
   metadata = {
-    ssh-keys  = "ubuntu:${var.ssh_public_key}"
+    ssh-keys = "ubuntu:${var.ssh_public_key}"
     user-data = templatefile("${path.module}/cloud-init.yaml.tpl", {
-      repo_url     = var.repo_url
-      database_url = var.database_url
-      tunnel_token = var.tunnel_token
+      repo_url                 = var.repo_url
+      database_url             = var.database_url
+      tunnel_token             = var.tunnel_token
+      ssh_host_ed25519_private = var.ssh_host_ed25519_private
+      ssh_host_ed25519_public  = var.ssh_host_ed25519_public
     })
   }
 }
