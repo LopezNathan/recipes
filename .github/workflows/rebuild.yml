@@ -46,6 +46,14 @@ jobs:
       - name: Terraform init
         run: terraform init -input=false
 
+      # The origin IP appears in the apply's resource diff (instance
+      # network_interface). Logs are public, and the Cloudflare-proxied DNS is
+      # what keeps the origin hidden — mask the IP before the apply prints it.
+      - name: Mask origin IP in logs
+        run: |
+          IP=$(terraform output -raw public_ip 2>/dev/null || true)
+          if [ -n "$IP" ]; then echo "::add-mask::$IP"; fi
+
       - name: Rebuild instance
         run: |
           terraform apply -input=false -auto-approve -lock-timeout=5m \
