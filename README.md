@@ -168,8 +168,9 @@ The backup workflow requires these repository secrets:
 `.github/workflows/rebuild.yml` runs weekly (Mondays 09:00 UTC, plus manual
 runs via `workflow_dispatch`) and recreates the GCP instance with
 `terraform apply -replace=google_compute_instance.app`. Rebuilding from the
-current `ubuntu-2204-lts` family image (plus `package_upgrade` in cloud-init)
-keeps the OS fully patched without maintaining an in-place upgrade path. The
+current `ubuntu-2204-lts` family image keeps the OS patched without maintaining
+an in-place upgrade path; Ubuntu's default unattended-upgrades covers security
+patches released since the image was built, in the background after boot. The
 static IP, DNS, and tunnel all survive the rebuild; the boot disk does not,
 which is fine because the server is stateless (the database lives in Neon).
 After the apply, the workflow polls `https://<subdomain>.<domain>/health` for

@@ -1,7 +1,10 @@
 #cloud-config
 
+# No package_upgrade here: weekly rebuilds already start from the current
+# ubuntu-2204-lts family image, and unattended-upgrades applies security
+# patches in the background post-boot — a blocking dist-upgrade before runcmd
+# only adds ~10-15 min of downtime per rebuild.
 package_update: true
-package_upgrade: true
 
 packages:
   - curl
