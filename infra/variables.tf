@@ -1,18 +1,19 @@
 variable "project_id" {
   description = "GCP project ID"
   type        = string
+  default     = "recipes-496402"
 }
 
 variable "region" {
   description = "GCP region — must be us-west1, us-central1, or us-east1 for free tier"
   type        = string
-  default     = "us-central1"
+  default     = "us-east1"
 }
 
 variable "zone" {
-  description = "GCP zone within the region (e.g. us-central1-a)"
+  description = "GCP zone within the region (e.g. us-east1-c)"
   type        = string
-  default     = "us-central1-a"
+  default     = "us-east1-c"
 }
 
 variable "credentials_file" {
@@ -21,14 +22,10 @@ variable "credentials_file" {
   default     = ""
 }
 
-variable "ssh_public_key" {
-  description = "SSH public key string to authorize on the instance (e.g. contents of ~/.ssh/id_ed25519.pub)"
-  type        = string
-}
-
 variable "repo_url" {
   description = "Git repo URL (e.g. https://github.com/you/recipes.git)"
   type        = string
+  default     = "https://github.com/LopezNathan/recipes.git"
 }
 
 variable "database_url" {
@@ -46,11 +43,13 @@ variable "cloudflare_api_token" {
 variable "cloudflare_account_id" {
   description = "Cloudflare Account ID (found on the right side of your domain's Overview page)"
   type        = string
+  default     = "c403778a850d9f61a15dd8e7caf4646d"
 }
 
 variable "cloudflare_zone_id" {
   description = "Cloudflare Zone ID (found on your domain's Overview page in the Cloudflare dashboard)"
   type        = string
+  default     = "049d1b5391e9644e85d480bb94ce8054"
 }
 
 variable "subdomain" {
@@ -70,9 +69,4 @@ variable "tunnel_token" {
   type        = string
   sensitive   = true
   default     = ""
-}
-
-variable "owner_email" {
-  description = "Email address allowed through Cloudflare Access (one-time PIN sent here)"
-  type        = string
 }

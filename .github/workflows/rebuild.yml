@@ -1,0 +1,66 @@
+name: Weekly Instance Rebuild
+
+# Recreates the GCP instance from the current ubuntu-2204-lts family image so
+# the server always boots from a freshly patched OS image (cloud-init then
+# applies any remaining updates via package_upgrade). The static IP, DNS, and
+# tunnel survive; the boot disk does not — the server is stateless (DB is Neon).
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Mondays 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # GitHub OIDC token for keyless GCP auth (Workload Identity Federation)
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    # Shared with the deploy job in deploy.yml so a deploy never SSHes into a
+    # half-rebuilt server.
+    concurrency:
+      group: recipes-server
+    defaults:
+      run:
+        working-directory: infra
+    # Non-sensitive variables come from committed defaults in infra/variables.tf;
+    # only the true secrets arrive via TF_VAR_ environment variables.
+    env:
+      TF_VAR_database_url: ${{ secrets.TF_VAR_DATABASE_URL }}
+      TF_VAR_cloudflare_api_token: ${{ secrets.TF_VAR_CLOUDFLARE_API_TOKEN }}
+      TF_VAR_tunnel_token: ${{ secrets.TF_VAR_TUNNEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/236742026496/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: github-ci@recipes-496402.iam.gserviceaccount.com
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Rebuild instance
+        run: |
+          terraform apply -input=false -auto-approve -lock-timeout=5m \
+            -replace=google_compute_instance.app
+
+      - name: Wait for app to come back healthy
+        run: |
+          URL=$(terraform output -raw url)
+          echo "Polling $URL/health"
+          for i in $(seq 1 60); do
+            if curl -fsS --max-time 10 "$URL/health" > /dev/null 2>&1; then
+              echo "Healthy after ~$((i * 15))s"
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "App did not become healthy within 15 minutes"
+          exit 1

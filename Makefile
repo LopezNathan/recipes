@@ -5,10 +5,6 @@ UVICORN = venv/bin/uvicorn
 RUFF    = venv/bin/ruff
 MYPY    = venv/bin/mypy
 
-DEPLOY_HOST ?= ubuntu@$(SERVER_IP)
-DEPLOY_DIR   = /opt/recipes
-DEPLOY_KEY  ?= ~/.ssh/id_ed25519
-
 -include .env
 export
 
@@ -58,10 +54,8 @@ logs:
 	docker compose -f docker-compose.local.yml logs -f db
 
 deploy:
-	rsync -az -e "ssh -i $(DEPLOY_KEY)" --exclude='.git' --exclude='venv' --exclude='__pycache__' \
-		--exclude='*.pyc' --exclude='.env' --exclude='infra' --exclude='tests' \
-		. $(DEPLOY_HOST):$(DEPLOY_DIR)
-	ssh -i $(DEPLOY_KEY) $(DEPLOY_HOST) 'cd $(DEPLOY_DIR) && sudo docker compose pull && sudo docker compose up -d --remove-orphans'
+	gcloud compute ssh recipes-server --zone=us-east1-c \
+		--command='cd /opt/recipes && sudo git pull --ff-only && sudo docker compose pull && sudo docker compose up -d --remove-orphans --wait --wait-timeout 180'
 
 release:
 	@LATEST=$$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0"); \
