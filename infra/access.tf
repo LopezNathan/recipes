@@ -13,7 +13,8 @@ resource "cloudflare_zero_trust_access_policy" "private" {
   include = [
     {
       email = {
-        email = data.cloudflare_account_members.owner.result[0].email
+        # sensitive() keeps the address out of plan output and CI logs
+        email = sensitive(data.cloudflare_account_members.owner.result[0].email)
       }
     }
   ]
