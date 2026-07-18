@@ -1,6 +1,9 @@
 output "public_ip" {
   description = "Static public IP of the recipes server"
   value       = google_compute_address.static.address
+  # The DNS record is Cloudflare-proxied, so the origin IP is not public
+  # knowledge — keep it out of terraform output listings and CI logs.
+  sensitive = true
 }
 
 output "ssh_command" {
