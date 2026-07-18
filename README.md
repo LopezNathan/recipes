@@ -143,7 +143,9 @@ The deploy workflow (`.github/workflows/deploy.yml`) runs on pushes to `main` an
 2. Connects to the server with `gcloud compute ssh` and runs `docker compose pull && docker compose up -d --wait`. Both production containers define a `healthcheck` that probes `GET /health` from inside the container (via Python stdlib — the slim image has no curl), so `--wait` makes the deploy step fail if the new containers don't become healthy within 180 seconds. The `restart: unless-stopped` policy still handles crashed processes; the healthcheck adds unhealthy-state visibility in `docker ps` and gates deploys.
 3. On a `v*` tag, creates a GitHub release with auto-generated notes.
 
-SSH auth goes through gcloud rather than a static deploy key: gcloud pushes a short-lived key (`--ssh-key-expire-after=10m`) to project metadata and verifies the server against host keys the guest agent publishes to guest attributes at boot (`--strict-host-key-checking=yes`). This is MITM-safe without any pinned `known_hosts`, and — unlike a pinned host key — survives instance rebuilds. The deploy job needs only the `GCP_SA_KEY` repository secret (service account JSON key, shared with the rebuild workflow). The former `DEPLOY_KEY` / `SERVER_IP` / `SSH_KNOWN_HOSTS` secrets are no longer used by CI (`make deploy` still uses a plain SSH key locally).
+SSH auth goes through gcloud rather than a static deploy key: gcloud pushes a short-lived key (`--ssh-key-expire-after=10m`) to project metadata and verifies the server against host keys the guest agent publishes to guest attributes at boot (`--strict-host-key-checking=yes`). This is MITM-safe without any pinned `known_hosts`, and — unlike a pinned host key — survives instance rebuilds. The former `DEPLOY_KEY` / `SERVER_IP` / `SSH_KNOWN_HOSTS` secrets are no longer used by CI (`make deploy` still uses a plain SSH key locally).
+
+GCP auth itself is keyless: [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation) (provisioned in `infra/ci.tf`) lets workflows exchange their GitHub OIDC token (`permissions: id-token: write`) for short-lived credentials of the dedicated `github-ci` service account — no service-account key exists for CI. The account is narrowly scoped: `compute.admin`, `iam.serviceAccountUser` on the default compute SA only, and object access on the tfstate bucket only. Impersonation is restricted to workflows from this repository via an attribute condition on the pool provider.
 
 ### Database backups
 
@@ -176,8 +178,7 @@ up to 15 minutes and fails if the app doesn't come back.
 The rebuild and deploy jobs share a `recipes-server` concurrency group so a
 deploy never SSHes into a half-rebuilt server.
 
-The rebuild workflow requires these repository secrets:
-- `GCP_SA_KEY` — the GCP service account JSON key (same one the deploy job uses)
+GCP auth is keyless via Workload Identity Federation (see the deploy section above). The only repository secret the rebuild workflow needs is:
 - `TF_VARS` — the full contents of `infra/terraform.tfvars` (`gh secret set TF_VARS < infra/terraform.tfvars`). Re-upload it whenever the tfvars change. The `credentials_file` entry is overridden in CI.
 
 ### Releasing a new version

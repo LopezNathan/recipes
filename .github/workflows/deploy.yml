@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write # GitHub OIDC token for keyless GCP auth (Workload Identity Federation)
 
 jobs:
   build:
@@ -53,7 +54,8 @@ jobs:
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v3
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: projects/236742026496/locations/global/workloadIdentityPools/github/providers/github-oidc
+          service_account: github-ci@recipes-496402.iam.gserviceaccount.com
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v3
