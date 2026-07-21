@@ -1,0 +1,58 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import CookMode from '../../components/CookMode.tsx';
+
+export async function getStaticPaths() {
+  const recipes = await getCollection('recipes');
+  return recipes.map((recipe) => ({
+    params: { slug: recipe.slug },
+    props: { recipe },
+  }));
+}
+
+const { recipe } = Astro.props;
+const { data } = recipe;
+const { Content } = await recipe.render();
+const total = data.time.prep + data.time.cook;
+---
+
+<Base title={data.title} description={`${data.title} — ${data.servings} servings`}>
+  <article data-pagefind-body>
+    <h1 data-pagefind-meta="title">{data.title}</h1>
+
+    <div class="recipe-meta">
+      <span>Prep {data.time.prep} min</span>
+      <span>Cook {data.time.cook} min</span>
+      <span>Total {total} min</span>
+      {data.rating && <span data-pagefind-filter="rating">{'★'.repeat(data.rating)}</span>}
+    </div>
+
+    {
+      data.tags.length > 0 && (
+        <div class="tags">
+          {data.tags.map((tag) => (
+            <a class="tag" href={`/tags/${tag}/`} data-pagefind-filter="tag">
+              {tag}
+            </a>
+          ))}
+        </div>
+      )
+    }
+
+    {data.source && (
+      <p class="muted">Source: <a href={data.source} rel="noopener">{data.source}</a></p>
+    )}
+
+    <CookMode
+      client:visible
+      baseServings={data.servings}
+      ingredients={data.ingredients}
+      steps={data.steps}
+    />
+
+    <div class="notes">
+      <Content />
+    </div>
+  </article>
+</Base>

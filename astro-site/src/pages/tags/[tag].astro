@@ -1,0 +1,39 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+export async function getStaticPaths() {
+  const recipes = await getCollection('recipes');
+  const tags = [...new Set(recipes.flatMap((r) => r.data.tags))];
+  return tags.map((tag) => ({
+    params: { tag },
+    props: {
+      tag,
+      recipes: recipes
+        .filter((r) => r.data.tags.includes(tag))
+        .sort((a, b) => a.data.title.localeCompare(b.data.title)),
+    },
+  }));
+}
+
+const { tag, recipes } = Astro.props;
+---
+
+<Base title={`#${tag}`} description={`Recipes tagged ${tag}`}>
+  <p class="muted"><a href="/">← all recipes</a></p>
+  <h1>#{tag}</h1>
+  <p class="muted">{recipes.length} recipe{recipes.length === 1 ? '' : 's'}</p>
+
+  <div class="grid">
+    {
+      recipes.map((r) => (
+        <a class="card" href={`/recipes/${r.slug}/`}>
+          <h3>{r.data.title}</h3>
+          <div class="meta">
+            {r.data.servings} servings · {r.data.time.prep + r.data.time.cook} min
+          </div>
+        </a>
+      ))
+    }
+  </div>
+</Base>

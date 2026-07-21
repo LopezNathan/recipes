@@ -1,0 +1,63 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+const recipes = (await getCollection('recipes')).sort((a, b) =>
+  a.data.title.localeCompare(b.data.title),
+);
+
+const allTags = [...new Set(recipes.flatMap((r) => r.data.tags))].sort();
+
+function totalTime(t: { prep: number; cook: number }) {
+  return t.prep + t.cook;
+}
+---
+
+<Base title="Recipes" description="A static recipe collection.">
+  <h1>Recipes</h1>
+  <p class="muted">{recipes.length} recipes. Filter by tag:</p>
+
+  <div class="tags" id="tagFilter">
+    <button type="button" class="tag active" data-tag="" aria-pressed="true">all</button>
+    {
+      allTags.map((tag) => (
+        <button type="button" class="tag" data-tag={tag} aria-pressed="false">
+          {tag}
+        </button>
+      ))
+    }
+  </div>
+
+  <div class="grid" id="recipeGrid">
+    {
+      recipes.map((r) => (
+        <a class="card" href={`/recipes/${r.slug}/`} data-tags={r.data.tags.join(' ')}>
+          <h3>{r.data.title}</h3>
+          <div class="meta">
+            {r.data.servings} servings · {totalTime(r.data.time)} min
+            {r.data.rating ? ` · ${'★'.repeat(r.data.rating)}` : ''}
+          </div>
+        </a>
+      ))
+    }
+  </div>
+
+  <script>
+    const filter = document.getElementById('tagFilter');
+    const grid = document.getElementById('recipeGrid');
+    filter?.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('button');
+      if (!btn) return;
+      const tag = btn.dataset.tag ?? '';
+      filter.querySelectorAll('button').forEach((b) => {
+        const on = b === btn;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', String(on));
+      });
+      grid?.querySelectorAll<HTMLElement>('.card').forEach((card) => {
+        const tags = (card.dataset.tags ?? '').split(' ');
+        card.style.display = !tag || tags.includes(tag) ? '' : 'none';
+      });
+    });
+  </script>
+</Base>

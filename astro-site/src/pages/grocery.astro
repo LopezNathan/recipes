@@ -1,0 +1,23 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import GroceryList from '../components/GroceryList.tsx';
+
+const recipes = (await getCollection('recipes'))
+  .sort((a, b) => a.data.title.localeCompare(b.data.title))
+  .map((r) => ({
+    slug: r.slug,
+    title: r.data.title,
+    baseServings: r.data.servings,
+    ingredients: r.data.ingredients,
+  }));
+---
+
+<Base title="Grocery list" description="Build a merged grocery list.">
+  <h1>Grocery list</h1>
+  <p class="muted">
+    Pick recipes and servings; quantities merge by item and dimension. Selection
+    is saved in your browser.
+  </p>
+  <GroceryList client:visible recipes={recipes} />
+</Base>

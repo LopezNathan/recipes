@@ -1,0 +1,24 @@
+{
+  "name": "recipes-astro",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "postbuild": "pagefind --site dist",
+    "preview": "astro preview",
+    "astro": "astro",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@astrojs/preact": "^3.5.4",
+    "astro": "^4.16.18",
+    "preact": "^10.24.3"
+  },
+  "devDependencies": {
+    "pagefind": "^1.1.1",
+    "vitest": "^2.1.8"
+  }
+}
