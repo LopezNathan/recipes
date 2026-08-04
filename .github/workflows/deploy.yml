@@ -47,6 +47,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+    # Disabled: recipes-server instance is no longer available, so the SSH
+    # deploy step has nothing to reach. Re-enable once a server exists again.
+    if: false
     # Shared with rebuild.yml so a deploy never SSHes into a half-rebuilt server.
     concurrency:
       group: recipes-server
