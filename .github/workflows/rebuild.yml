@@ -6,8 +6,8 @@ name: Weekly Instance Rebuild
 # tunnel survive; the boot disk does not — the server is stateless (DB is Neon).
 
 on:
-  schedule:
-    - cron: '0 9 * * 1' # Mondays 09:00 UTC
+  # schedule:
+  #   - cron: '0 9 * * 1' # Mondays 09:00 UTC
   workflow_dispatch:
 
 permissions:
